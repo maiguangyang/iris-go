@@ -12,7 +12,6 @@ $ n 1.8.x 以上
 # 安装 Package依赖包
 $ gopkg.in/kataras/iris.v6
 $ github.com/dgrijalva/jwt-go
-$ github.com/iris-contrib/middleware/jwt
 
 ```
 
