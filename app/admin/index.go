@@ -16,14 +16,18 @@ const (
  * 生成json web token
  */
 func GenToken() string {
-	claims := &jwt.StandardClaims{
-		NotBefore: int64(time.Now().Unix()),
-		ExpiresAt: int64(time.Now().Unix() + 1000),
-		Issuer:    "hzwy23",
-	}
+	// claims := &jwt.StandardClaims{
+	// 	NotBefore: int64(time.Now().Unix()),
+	// 	ExpiresAt: int64(time.Now().Unix() + 1000),
+	// 	Issuer:    "Token",
+	// }
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"userid":    "123456",
+		"timestamp": int64(time.Now().Unix()),
+	})
 	ss, err := token.SignedString([]byte(SecretKey))
+
 	if err != nil {
 		return ""
 	}
@@ -35,16 +39,17 @@ func GenToken() string {
  * 校验token是否有效
  */
 func keyFunc(token *jwt.Token) (interface{}, error) {
-	println(token.Header["Issuer"])
 	return []byte(SecretKey), nil
 }
 
-func CheckToken(token string) bool {
-	_, err := jwt.Parse(token, keyFunc)
+func parseToken(unparseToken string) (jwt.MapClaims, error) {
+	token, err := jwt.Parse(unparseToken, keyFunc)
 	if err != nil {
-		return false
+		return nil, err
 	}
-	return true
+
+	claims := token.Claims.(jwt.MapClaims)
+	return claims, nil
 }
 
 /**
@@ -79,19 +84,19 @@ func Authorization(ctx *iris.Context) {
 		return
 	}
 
-	claims := CheckToken(authHeader[7:])
+	claims, err := parseToken(authHeader[7:])
 
-	println(claims)
+	if err != nil {
+		text := responseJsonStr("授权已失效")
+		err := json.Unmarshal([]byte(text), &responseData)
 
-	// if err != nil {
-	// 	text := responseJsonStr("授权已失效")
-	// 	err := json.Unmarshal([]byte(text), &responseData)
+		if err == nil {
+			ctx.JSON(iris.StatusOK, responseData)
+		}
+		return
+	}
 
-	// 	if err == nil {
-	// 		ctx.JSON(iris.StatusOK, responseData)
-	// 	}
-	// 	return
-	// }
+	println(claims["userid"].(string))
 
 	ctx.Next()
 
@@ -102,21 +107,8 @@ func Authorization(ctx *iris.Context) {
  */
 
 func SetSession(ctx *iris.Context) {
-	// ctx.Session().Set("name", "iris")
-	// ctx.Writef("Set：%s", ctx.Session().GetString("name"))
-
-	// token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-	// 	"foo":       "bar",
-	// 	"timestamp": time.Now().Unix(),
-	// })
-
-	// tokenString, _ := token.SignedString([]byte(SecretKey))
-
 	token := GenToken()
-	println(token)
-
 	ctx.Writef(token)
-
 }
 
 func GetSession(ctx *iris.Context) {
