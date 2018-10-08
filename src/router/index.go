@@ -87,6 +87,7 @@ func Init() {
 
   // 检测是否设置数据库
   app.Get("/sys/check/database", AppSys.CheckDataBase)
+  app.Post("/sys/check/database", AppSys.CheckDataBasePost)
 
 
   // 系统配置

@@ -1,6 +1,7 @@
 package sys
 
 import (
+  "fmt"
   "encoding/json"
   "github.com/kataras/iris/context"
 
@@ -30,8 +31,25 @@ func CheckDataBase(ctx context.Context) {
     data = context.Map{ "has": true }
   }
 
+
   ctx.JSON(Utils.NewResData(200, data, ctx))
 }
+
+// 检测是否设置数据库
+func CheckDataBasePost(ctx context.Context) {
+  type data struct {
+    Content string
+  }
+
+  var cData data
+  ctx.ReadJSON(&cData)
+
+  fmt.Println(cData.Content)
+
+  ctx.JSON(Utils.NewResData(200, cData.Content, ctx))
+}
+
+
 
 // 登录
 func Login(ctx context.Context) {
