@@ -28,8 +28,8 @@ func CheckAuthAdmin(ctx context.Context) interface{} {
 }
 
 /**
- * 生成json web token
  * 统一使用
+ * 生成json web token
  */
 func SetToken(str interface{}, role string) string {
   timeNow := time.Now().Unix()
@@ -86,5 +86,6 @@ func Verify(authHeader string, key []byte, ctx context.Context) interface{} {
     return Utils.NewResData(401, "登录授权已失效", ctx)
   }
 
+  ctx.Next()
   return nil
 }
