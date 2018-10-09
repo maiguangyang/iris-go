@@ -29,7 +29,7 @@ func main() {
   signal.Notify(c, os.Interrupt, os.Kill)
   <-c
   // 关闭数据库连接
-  if Database.DB != nil && Database.DB.Ping() == nil {
-    Database.DB.Close()
+  if Database.Engine != nil && Database.Engine.Ping() == nil {
+    Database.Engine.Close()
   }
 }

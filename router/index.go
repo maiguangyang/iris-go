@@ -76,11 +76,11 @@ func Init() {
 
   // 检测是否设置数据库
   app.Get("/sys/check/database", AppTest.CheckDataBase)
-  // app.Post("/sys/check/database", AppSys.CheckDataBasePost)
+  // app.Post("/sys/check/database", AppTest.CheckDataBasePost)
 
 
   // 系统配置
-  // sys := app.Party("/sys", AppSys.Authorization)
+  // sys := app.Party("/sys", AppSys.Authorization, )
   // {
   //   sys.Post("/password", AppSys.ModifyPassword)      // 修改密码
   //   sys.Get("/config", AppSys.GetConfig)              // 获取配置

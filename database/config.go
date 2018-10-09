@@ -1,96 +1,80 @@
 package database
 
 import (
-  "database/sql"
+  "fmt"
+  // "reflect"
+  // "database/sql"
   _ "github.com/go-sql-driver/mysql"
-
+  "github.com/go-xorm/xorm"
 )
 
-var DB *sql.DB
-type Map map[string]interface{}
+var Engine *xorm.Engine
 
 // 连接
 func OpenSql() error {
-  database := "idongpin"
-  dataSourceName := "root:123456@tcp(192.168.0.234:3306)/"
+  dataSourceName := "root:123456@tcp(192.168.0.234:3306)/idongpin?charset=utf8mb4"
 
   var err error
-  // 接连数据库
-  err = SetDB(dataSourceName)
+
+  // 接连数据库，已经连接上，要手动断开连接
+  if Engine != nil && Engine.Ping() == nil {
+    Engine.Close()
+  }
+
+  Engine, _ = xorm.NewEngine("mysql", dataSourceName)
+
+  err = Engine.Ping()
   if err != nil {
+    defer Engine.Close()
     return err
   }
 
-  // 查询库
-  rows, err := DB.Query("SHOW DATABASES")
-  if err != nil {
-    defer DB.Close()
-    return err
-  }
+  // 测试数据
+  // type IdpAdmins struct {
+  //   Id int64
+  //   Username string
+  //   CreatedAt int64 `xorm:"created"`
+  // }
 
-  defer rows.Close()
-  for rows.Next() {
-    var d string
-    err = rows.Scan(&d)
-    if err != nil {
-      defer DB.Close()
-      return err
-    }
-    // 找到库
-    if d == database {
-      // 重新连接，不能用use语句，因为rows.Close()时use会被清空
-      return SetDB(dataSourceName + database + "?charset=utf8mb4")
-    }
-  }
+  // var table JdAdmins
+  // table.Id = 1
 
-  // 找不到库，创建库
-  _, err = DB.Exec("create DATABASE " + database)
-  if err != nil {
-    defer DB.Close()
-    return err
-  }
+  // err = Post(&table)
+  // Delete(&table)
 
-  // 重新连接，不能用use语句，因为rows.Close()时use会被清空
-  err = SetDB(dataSourceName + database + "?charset=utf8mb4")
-  if err != nil {
-    return err
-  }
-  return nil
-}
-
-// 设置DB
-func SetDB(dataSourceName string) error {
-  // 已经连接上，要手动断开连接
-  if DB != nil && DB.Ping() == nil {
-    DB.Close()
-  }
-
-  var err error
-  DB, err = sql.Open("mysql", dataSourceName)
-
-  err = DB.Ping()
-  if err != nil {
-    defer DB.Close()
-    return err
-  }
-
-  // 检查必需表
-  // err = HasTable()
-  return nil
-}
-
-// 测试连接
-func TestOpen(driverName, dataSourceName string) error {
-  db, err := sql.Open(driverName, dataSourceName)
-  if err != nil {
-    return err
-  }
-  defer db.Close()
-
-  err = db.Ping()
-  if err != nil {
-    return err
-  }
+  // Get(&table, `id < ? && username = ?`, []interface{}{5, "123"})
 
   return nil
+
 }
+
+// 新增数据
+func Post(table interface{}) error {
+  // TODU 用户权限验证
+  _, err := Engine.Insert(table)
+  return err
+}
+
+// 更新数据
+func Put(id int64, table interface{}) error {
+  // TODU 用户权限验证
+  _, err := Engine.Id(id).Update(table)
+  return err
+}
+
+// 删除记录
+func Delete(table interface{}) error {
+  // TODU 用户权限验证
+  _, err := Engine.Delete(table)
+  return err
+}
+
+// 查询记录
+func Get(table, where interface{}, value []interface{}) (interface{}, bool) {
+  // 单条记录
+  has, _ := Engine.Where(where, value...).Get(table)
+  fmt.Println(table)
+  return table, has
+}
+
+
