@@ -7,29 +7,19 @@ import (
 
 func NewResData(code int, data interface{}, ctx context.Context) context.Map {
   var msg interface{}
-  resData := ""
+  var resData interface{}
 
   if code == 200 {
     msg = "success"
-    switch data.(type) {
-    case context.Map:
-      resData, _ = Public.EncryptJosn(data, ctx.GetHeader("Secret-Key"))
-    }
   } else {
     msg = "error"
-    switch data.(type) {
-    case string:
-      msg = data
-    case context.Map:
-      d := data.(context.Map)
-      if d["msg"] != nil {
-        msg = d["msg"]
-      }
-      resData, _ = Public.EncryptJosn(d, ctx.GetHeader("Secret-Key"))
-    }
   }
 
-
+  if Public.NODE_ENV {
+    resData, _ = Public.EncryptJosn(data, ctx.GetHeader("Secret-Key"))
+  } else {
+    resData = data
+  }
 
   return context.Map{
     "code"        : code,

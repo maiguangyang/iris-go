@@ -5,7 +5,8 @@ import (
   "os"
   "os/signal"
 
-  Database "./database"
+  DB "./database"
+  Public "./public"
   Router "./router"
 )
 
@@ -14,9 +15,11 @@ var (
 )
 
 func main() {
+  // 初始化系统环境变量
+  Public.IsNodeEnv(NODE_ENV)
 
   // 连接数据库
-  err := Database.OpenSql()
+  err := DB.OpenSql()
   if err != nil {
     fmt.Println("连接数据库失败：", err.Error())
   }
@@ -29,7 +32,9 @@ func main() {
   signal.Notify(c, os.Interrupt, os.Kill)
   <-c
   // 关闭数据库连接
-  if Database.Engine != nil && Database.Engine.Ping() == nil {
-    Database.Engine.Close()
+  if DB.Engine != nil && DB.Engine.Ping() == nil {
+    DB.Engine.Close()
   }
 }
+
+// go build -ldflags "-X 'main.NODE_ENV=master'" ./main.go

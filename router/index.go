@@ -6,7 +6,10 @@ import (
   "github.com/kataras/iris/context"
   "crypto/md5"
 
+  Public "../public"
+  Auth "../authorization"
   AppTest "../app/test"
+  Admin "../app/admin"
 )
 
 func Init() {
@@ -44,32 +47,36 @@ func Init() {
   app := appNew.Party("/", func(ctx context.Context) {
     header(ctx)
 
-    key := ctx.GetHeader("Secret-Key")
-    headHash := ctx.GetHeader("Hash")
 
-    if key == "" || headHash == "" {
-      peter := context.Map{
-        "code"       : 403,
-        "data"       : "",
-        "msg"        : "key or hash not found",
-        "status_code": 200,
+     if Public.NODE_ENV {
+      key := ctx.GetHeader("Secret-Key")
+      headHash := ctx.GetHeader("Hash")
+
+      if key == "" || headHash == "" {
+        peter := context.Map{
+          "code"       : 403,
+          "data"       : "",
+          "msg"        : "key or hash not found",
+          "status_code": 200,
+        }
+        ctx.JSON(peter)
+        return
       }
-      ctx.JSON(peter)
-      return
-    }
 
-    hash := fmt.Sprintf("%x", md5.Sum([]byte(key[8:108] + "EQUOYpl72tsjwzJnnY")));
+      hash := fmt.Sprintf("%x", md5.Sum([]byte(key[8:108] + "EQUOYpl72tsjwzJnnY")));
 
-    if headHash != hash {
-      peter := context.Map{
-        "code"       : 403,
-        "data"       : "",
-        "msg"        : "非法请求",
-        "status_code": 200,
+      if headHash != hash {
+        peter := context.Map{
+          "code"       : 403,
+          "data"       : "",
+          "msg"        : "非法请求",
+          "status_code": 200,
+        }
+        ctx.JSON(peter)
+        return
       }
-      ctx.JSON(peter)
-      return
-    }
+     }
+
     ctx.Next()
   })
 
@@ -79,15 +86,15 @@ func Init() {
   // app.Post("/sys/check/database", AppTest.CheckDataBasePost)
 
 
-  // 系统配置
-  // sys := app.Party("/sys", AppSys.Authorization, )
+  // admin
+  app.Put("/admin/login", Admin.Login)      // 登陆
+  admin := app.Party("/admin", Auth.CheckAuthAdmin)
   // {
-  //   sys.Post("/password", AppSys.ModifyPassword)      // 修改密码
-  //   sys.Get("/config", AppSys.GetConfig)              // 获取配置
-  //   sys.Post("/config", AppSys.EditConfig)            // 修改配置
-  //   sys.Post("/test/sqlopen", AppSys.TestOpen)        // 测试数据库连接
-  //   sys.Get("/database", AppSys.GetDatabase)          // 获取数据库库列表
-  //   sys.Put("/database", AppSys.AddDatabase)          // 添加库
+    admin.Get("/detail", Admin.Detail)              // 获取配置
+    // sys.Post("/config", AppSys.EditConfig)            // 修改配置
+    // sys.Post("/test/sqlopen", AppSys.TestOpen)        // 测试数据库连接
+    // sys.Get("/database", AppSys.GetDatabase)          // 获取数据库库列表
+    // sys.Put("/database", AppSys.AddDatabase)          // 添加库
   // }
 
   appNew.Run(iris.Addr(":1874"))

@@ -18,13 +18,13 @@ var SecretKey = context.Map{
 }
 
 // 检查user的Token
-func CheckAuthUser(ctx context.Context) interface{} {
-  return Verify(ctx.GetHeader("Authorization"), []byte(SecretKey["user"].(string)), ctx)
+func CheckAuthUser(ctx context.Context) {
+  Verify(ctx.GetHeader("Authorization"), []byte(SecretKey["user"].(string)), ctx)
 }
 
 // 检查admin的Token
-func CheckAuthAdmin(ctx context.Context) interface{} {
-  return Verify(ctx.GetHeader("Authorization"), []byte(SecretKey["admin"].(string)), ctx)
+func CheckAuthAdmin(ctx context.Context) {
+  Verify(ctx.GetHeader("Authorization"), []byte(SecretKey["admin"].(string)), ctx)
 }
 
 /**
@@ -62,6 +62,15 @@ func ParseToken(tokenStr string, key []byte) (jwt.MapClaims, error) {
 }
 
 /**
+ * token解密
+ */
+func DecryptToken(tokenStr, role string) (interface{}, error) {
+  claims, err := GetTokenContent(tokenStr, []byte(SecretKey[role].(string)))
+  return claims, err
+}
+
+
+/**
  * 获取token内容
  */
 func GetTokenContent(authHeader string, key []byte) (interface{}, error) {
@@ -73,9 +82,10 @@ func GetTokenContent(authHeader string, key []byte) (interface{}, error) {
  * 授权验证
  * 验证长度 -> 检查token记录 -> 校验token -> 检查ip地址
  */
-func Verify(authHeader string, key []byte, ctx context.Context) interface{} {
+func Verify(authHeader string, key []byte, ctx context.Context) {
   if authHeader == "" || len(authHeader) <= 7 {
-    return Utils.NewResData(401, "未登录", ctx)
+    ctx.JSON(Utils.NewResData(401, "未登录", ctx))
+    return
   }
 
   token := authHeader[7:]
@@ -83,9 +93,9 @@ func Verify(authHeader string, key []byte, ctx context.Context) interface{} {
   // 校验token
   _, err := ParseToken(token, key)
   if err != nil {
-    return Utils.NewResData(401, "登录授权已失效", ctx)
+    ctx.JSON(Utils.NewResData(401, "登录授权已失效", ctx))
+    return
   }
 
   ctx.Next()
-  return nil
 }

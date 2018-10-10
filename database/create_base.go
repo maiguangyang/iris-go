@@ -5,12 +5,23 @@ package database
 // )
 
 const (
+  IDP_AUTH = `CREATE TABLE idp_auth (
+    id INT(11) NOT NULL AUTO_INCREMENT COMMENT 'id',
+    content TEXT(10000) NOT NULL COMMENT 'json格式配置文件',
+    updated_at INT(11) NULL DEFAULT NULL COMMENT '修改时间',
+    created_at INT(11) NULL DEFAULT NULL COMMENT '创建时间',
+    PRIMARY KEY (id)
+  )`
+
   IDP_ADMIN = `CREATE TABLE idp_admins (
     id INT(11) NOT NULL AUTO_INCREMENT COMMENT 'id',
-    username VARCHAR(64) NULL DEFAULT '' COMMENT '账号',
+    phone VARCHAR(64) NULL DEFAULT '' COMMENT '手机号码（用来登陆）',
     password VARCHAR(64) NULL DEFAULT '' COMMENT '登录密码',
+    realname VARCHAR(64) NULL DEFAULT '' COMMENT '姓名',
     nickname VARCHAR(64) NULL DEFAULT '' COMMENT '昵称',
     avatar VARCHAR(255) NULL DEFAULT '' COMMENT '头像',
+    sex int(2) DEFAULT 0 COMMENT '性别：0未知、1男、2女',
+    identity VARCHAR(255) NULL DEFAULT '' COMMENT '身份证号码',
     groups INT(2) NULL DEFAULT 0 COMMENT '用户组',
     roles INT(2) NULL DEFAULT 0 COMMENT '用户组里面的角色',
     state INT(2) NULL DEFAULT 0 COMMENT '账号状态：0启动、1禁用',
@@ -26,7 +37,8 @@ const (
   IDP_ADMIN_GROUP = `CREATE TABLE idp_admins_group (
     id INT(11) NOT NULL AUTO_INCREMENT COMMENT 'id',
     name VARCHAR(64) NULL DEFAULT '' COMMENT '组名称',
-    value INT(11) NULL DEFAULT 0 COMMENT '用户组',
+    value INT(11) NULL DEFAULT 0 COMMENT '用户组：0超级管理员、其他的自定义添加',
+    state INT(2) NULL DEFAULT 0 COMMENT '状态：0启动、1禁用',
     deleted_at INT(11) NULL DEFAULT NULL COMMENT '删除时间',
     updated_at INT(11) NULL DEFAULT NULL COMMENT '修改时间',
     created_at INT(11) NULL DEFAULT NULL COMMENT '创建时间',
@@ -36,7 +48,8 @@ const (
   IDP_ADMIN_ROLE = `CREATE TABLE idp_admins_role (
     id INT(11) NOT NULL AUTO_INCREMENT COMMENT 'id',
     name VARCHAR(64) NULL DEFAULT '' COMMENT '角色名称',
-    value INT(11) NULL DEFAULT 0 COMMENT '用户角色',
+    value INT(11) NULL DEFAULT 0 COMMENT '用户角色：0超级管理员、其他的自定义添加',
+    state INT(2) NULL DEFAULT 0 COMMENT '状态：0启动、1禁用',
     deleted_at INT(11) NULL DEFAULT NULL COMMENT '删除时间',
     updated_at INT(11) NULL DEFAULT NULL COMMENT '修改时间',
     created_at INT(11) NULL DEFAULT NULL COMMENT '创建时间',
