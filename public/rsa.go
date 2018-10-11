@@ -42,8 +42,26 @@ func Gen() error {
 }
 
 // 解密
-func Decrypt(text string) ([]byte, error) {
+func Decrypt(text, prvPemEnc string) ([]byte, error) {
   var ciphertext []byte
+
+  prvPem, err := base64.StdEncoding.DecodeString(prvPemEnc)
+  if err != nil {
+    return ciphertext, err
+  }
+  block, _ := pem.Decode(prvPem)
+
+
+  if block == nil {
+    return ciphertext, errors.New("failed to parse PEM block containing the private key")
+  }
+
+  prvKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+
+  if err != nil {
+    return ciphertext, err
+  }
+
   limitLen := 172
   textLen := len(text)
   if textLen % limitLen != 0 {
@@ -70,8 +88,8 @@ func Decrypt(text string) ([]byte, error) {
 }
 
 // 解密后的数据为json
-func DecryptJson(text string) (map[string]interface{}, error) {
-  b, err := Decrypt(text)
+func DecryptJson(text, pubPemEnc string) (map[string]interface{}, error) {
+  b, err := Decrypt(text, pubPemEnc)
   if err != nil {
     return map[string]interface{}{}, err
   }
@@ -111,6 +129,7 @@ func Encrypt(text, pubPemEnc string) (string, error) {
 
     encrypted += base64.StdEncoding.EncodeToString(enc)
   }
+
   return encrypted, nil
 }
 
@@ -118,9 +137,12 @@ func Encrypt(text, pubPemEnc string) (string, error) {
 func EncryptJosn(v interface{}, pubPemEnc string) (string, error) {
   // 配置信息转字符串
   text, err := json.Marshal(v)
+
+
   if err != nil {
     return "", err
   }
   // 加密数据
-  return Encrypt(string(text), pubPemEnc)
+  data, err := Encrypt(string(text), pubPemEnc)
+  return data, err
 }

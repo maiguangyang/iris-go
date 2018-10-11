@@ -1,10 +1,8 @@
 package router
 
 import (
-  "fmt"
   "github.com/kataras/iris"
   "github.com/kataras/iris/context"
-  "crypto/md5"
 
   Public "../public"
   Auth "../authorization"
@@ -48,7 +46,7 @@ func Init() {
     header(ctx)
 
 
-     if Public.NODE_ENV {
+    if Public.NODE_ENV {
       key := ctx.GetHeader("Secret-Key")
       headHash := ctx.GetHeader("Hash")
 
@@ -63,7 +61,8 @@ func Init() {
         return
       }
 
-      hash := fmt.Sprintf("%x", md5.Sum([]byte(key[8:108] + "EQUOYpl72tsjwzJnnY")));
+      // 验证hash
+      hash := Public.CheckHash(key)
 
       if headHash != hash {
         peter := context.Map{
@@ -75,7 +74,7 @@ func Init() {
         ctx.JSON(peter)
         return
       }
-     }
+    }
 
     ctx.Next()
   })
@@ -83,7 +82,7 @@ func Init() {
 
   // 检测是否设置数据库
   app.Get("/sys/check/database", AppTest.CheckDataBase)
-  // app.Post("/sys/check/database", AppTest.CheckDataBasePost)
+  app.Post("/sys/check/database", AppTest.CheckDataBasePost)
 
 
   // admin
@@ -105,7 +104,7 @@ func header(ctx context.Context) context.Context {
   ctx.Header("Access-Control-Allow-Origin", "*")
   ctx.Header("Access-Control-Allow-Credentials", "true")
   ctx.Header("Access-Control-Allow-Headers", "DNT,X-Mx-ReqToken,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Authorization,Secret-Key,Hash");
-  ctx.Header("Access-Control-Allow-Methods","PUT,POST,GET,DELETE,OPTIONS");
-  ctx.Header("Access-Control-Expose-Headers", "*");
+  ctx.Header("Access-Control-Allow-Methods","PUT,POST,GET,DELETE,OPTIONS")
+  ctx.Header("Access-Control-Expose-Headers", "*")
   return ctx
 }
