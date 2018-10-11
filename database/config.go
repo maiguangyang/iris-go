@@ -30,6 +30,9 @@ func OpenSql() error {
     return err
   }
 
+  // cacher := xorm.NewLRUCacher(xorm.NewMemoryStore(), 1000)
+  // Engine.SetDefaultCacher(cacher)
+
   // 测试数据
   // type IdpAdmins struct {
   //   Id int64
