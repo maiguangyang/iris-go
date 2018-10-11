@@ -104,8 +104,8 @@ func HasInitTable() {
     CreatedAt int64 `xorm:"created"`
   }
   var admin IdpAdmins
-  admin.Phone    = "admin"
-  admin.Password = Public.EncryptPassword("admin")
+  admin.Phone    = "13800138000"
+  admin.Password = Public.EncryptPassword("123456")
   admin.Nickname = "admin"
   admin.Groups   = 0
   admin.Roles    = 0
