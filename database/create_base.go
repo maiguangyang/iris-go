@@ -28,6 +28,8 @@ const (
     login_count INT(11) NULL DEFAULT 0 COMMENT '登陆次数',
     login_time INT(11) NULL DEFAULT NULL COMMENT '登陆时间',
     last_time INT(11) NULL DEFAULT NULL COMMENT '上次登陆时间',
+    login_ip VARCHAR(255) NULL DEFAULT NULL COMMENT '登陆Ip',
+    last_ip VARCHAR(255) NULL DEFAULT NULL COMMENT '上次登陆Ip',
     deleted_at INT(11) NULL DEFAULT NULL COMMENT '删除时间',
     updated_at INT(11) NULL DEFAULT NULL COMMENT '修改时间',
     created_at INT(11) NULL DEFAULT NULL COMMENT '创建时间',

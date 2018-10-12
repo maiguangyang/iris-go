@@ -1,8 +1,8 @@
 package admin
 
 import(
-  "fmt"
-
+  // "fmt"
+  // "encoding/json"
   "github.com/kataras/iris/context"
 
   Auth "../../authorization"
@@ -11,36 +11,50 @@ import(
   DB "../../database"
 )
 
+type IdpAdmins struct {
+  Id int64 `json:"id"`
+  Phone string `json:"phone"`
+  Password string `json:"password"`
+  State int64 `json:"state"`
+  LoginCount int64 `xorm:"version"`
+  LoginTime int64 `xorm:"updated"`
+  LastTime int64 `json:"last_time"`
+  LoginIp string `json:"login_ip"`
+  LastIp string `json:"last_ip"`
+  // LoginTime int64 `xorm:"created"`
+}
+
 // 登陆
 func Login(ctx context.Context) {
 
-  type ReqData struct {
-    Phone string `json:"phone"`
-    Password string `json:"password"`
-  }
-  var reqData ReqData
-
-  type IdpAdmins struct {
-    Id int64 `json:"id"`
-    // LoginTime int64 `xorm:"created"`
-  }
-
   var table IdpAdmins
 
+  // 接收前端传值
+  ctx.ReadJSON(&table)
+  table.Password = Public.EncryptPassword(table.Password)
 
-  ctx.ReadJSON(&reqData)
-
-  phone    := reqData.Phone
-  Password := Public.EncryptPassword(reqData.Password)
-
-  has, err := DB.Engine.Where("state = 0 and phone = ? and password = ?", phone, Password).Get(&table)
+  has, err := DB.Engine.Get(&table)
 
   data := context.Map{}
 
   if err != nil {
     data = Utils.NewResData(401, err.Error(), ctx)
   } else if has == true {
-    data = Utils.NewResData(200, Auth.SetToken(table, "admin"), ctx)
+    // 返回前端的Token
+    ip := ctx.RemoteAddr()
+
+    token := Auth.SetToken(context.Map{
+      "id": table.Id,
+    }, Public.EncryptMd5(ip + Auth.SecretKey["admin"].(string)), "admin")
+
+    table.LastTime = table.LoginTime
+    table.LastTime = table.LoginTime
+    table.LastIp   = table.LoginIp
+    table.LoginIp  = ip
+
+    // 更新用户登陆信息
+    UpdataUserLoginInfo(table)
+    data = Utils.NewResData(200, token, ctx)
   } else {
     data = Utils.NewResData(401, "请检查账号密码输入是否正确", ctx)
   }
@@ -51,6 +65,9 @@ func Login(ctx context.Context) {
 
 // 用户详情
 func Detail (ctx context.Context) {
+  // authorization, _ := Auth.DecryptToken(ctx.GetHeader("Authorization"), "admin")
+  // authorization = Public.EncryptMd5(string(authorization))
+
   res := GetUserDetail(ctx.GetHeader("Authorization"), ctx)
   ctx.JSON(res)
 }
@@ -75,7 +92,10 @@ func GetUserDetail(author string, ctx context.Context) context.Map {
     Groups int64 `json:"groups"`
     Roles int64 `json:"roles"`
     LoginCount int64 `json:"login_count"`
+    LoginTime int64 `json:"login_time"`
     LastTime int64 `json:"last_time"`
+    LoginIp string `json:"login_ip"`
+    LastIp string `json:"last_ip"`
     CreatedAt int64 `json:"created_at"`
     // LoginTime int64 `xorm:"created"`
   }
@@ -89,7 +109,15 @@ func GetUserDetail(author string, ctx context.Context) context.Map {
     return Utils.NewResData(200, table, ctx)
   }
 
-  fmt.Println(has, err, table)
-  return Utils.NewResData(200, "该用户不存在", ctx)
+  return Utils.NewResData(200, err, ctx)
 }
+
+// 更新用户登陆信息
+func UpdataUserLoginInfo (table IdpAdmins) {
+  _ = DB.Put(table.Id, &table)
+}
+
+
+
+
 
