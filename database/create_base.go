@@ -5,6 +5,8 @@ package database
 // )
 
 const (
+  IDP_DONGPIN = `CREATE DATABASE IF NOT EXISTS idongpin DEFAULT CHARSET utf8mb4 COLLATE utf8mb4_unicode_ci`
+
   IDP_AUTH = `CREATE TABLE idp_auth (
     id INT(11) NOT NULL AUTO_INCREMENT COMMENT 'id',
     content TEXT(10000) NOT NULL COMMENT 'json格式配置文件',

@@ -65,9 +65,6 @@ func Login(ctx context.Context) {
 
 // 用户详情
 func Detail (ctx context.Context) {
-  // authorization, _ := Auth.DecryptToken(ctx.GetHeader("Authorization"), "admin")
-  // authorization = Public.EncryptMd5(string(authorization))
-
   res := GetUserDetail(ctx.GetHeader("Authorization"), ctx)
   ctx.JSON(res)
 }
