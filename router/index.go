@@ -45,7 +45,6 @@ func Init() {
   app := appNew.Party("/", func(ctx context.Context) {
     header(ctx)
 
-
     if Public.NODE_ENV {
       key := ctx.GetHeader("Secret-Key")
       headHash := ctx.GetHeader("Hash")
@@ -88,13 +87,14 @@ func Init() {
   // admin
   app.Put("/admin/login", Admin.Login)      // 登陆
   admin := app.Party("/admin", Auth.CheckAuthAdmin)
-  // {
-    admin.Get("/detail", Admin.Detail)              // 获取配置
-    // sys.Post("/config", AppSys.EditConfig)            // 修改配置
-    // sys.Post("/test/sqlopen", AppSys.TestOpen)        // 测试数据库连接
+  {
+    admin.Get("/detail", Admin.Detail)              // 账户详情
+    admin.Get("/group", Admin.GroupList)            // 部门列表
+    admin.Post("/group", Admin.GroupAdd)            // 添加部门
+    // sys.Post("/test/sqlopen", AppSyßs.TestOpen)        // 测试数据库连接
     // sys.Get("/database", AppSys.GetDatabase)          // 获取数据库库列表
     // sys.Put("/database", AppSys.AddDatabase)          // 添加库
-  // }
+  }
 
   appNew.Run(iris.Addr(":1874"))
 }

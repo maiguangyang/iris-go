@@ -8,7 +8,7 @@ import(
 )
 
 // 新增部门
-func GroupAdd(ctx context.Context) {
+func AuthAdd(ctx context.Context) {
   fmt.Println(ctx)
   // fmt.Println(Auth.SetToken(context.Map{"name":1}, "user"))
 

@@ -30,24 +30,6 @@ func OpenSql() error {
     return err
   }
 
-  // cacher := xorm.NewLRUCacher(xorm.NewMemoryStore(), 1000)
-  // Engine.SetDefaultCacher(cacher)
-
-  // 测试数据
-  // type IdpAdmins struct {
-  //   Id int64
-  //   Username string
-  //   CreatedAt int64 `xorm:"created"`
-  // }
-
-  // var table JdAdmins
-  // table.Id = 1
-
-  // err = Post(&table)
-  // Delete(&table)
-
-  // Get(&table, `id < ? && username = ?`, []interface{}{5, "123"})
-
   HasInitTable()
   return nil
 
@@ -182,6 +164,11 @@ func Get(table, where interface{}, value []interface{}) (interface{}, bool) {
   // 单条记录
   has, _ := Engine.Where(where, value...).Get(table)
   return table, has
+}
+
+func Find(table interface{}) error {
+  err := Engine.Find(table)
+  return err
 }
 
 func CheckErr(err error) {
