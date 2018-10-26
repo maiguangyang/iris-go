@@ -90,7 +90,9 @@ func Init() {
   {
     admin.Get("/detail", Admin.Detail)              // 账户详情
     admin.Get("/group", Admin.GroupList)            // 部门列表
+    admin.Get("/group/{id:int64}", Admin.GroupDetail)            // 部门列表
     admin.Post("/group", Admin.GroupAdd)            // 添加部门
+    admin.Put("/group", Admin.GroupPut)             // 添加部门
     // sys.Post("/test/sqlopen", AppSyßs.TestOpen)        // 测试数据库连接
     // sys.Get("/database", AppSys.GetDatabase)          // 获取数据库库列表
     // sys.Put("/database", AppSys.AddDatabase)          // 添加库

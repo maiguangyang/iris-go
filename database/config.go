@@ -160,14 +160,15 @@ func Delete(table interface{}) error {
 }
 
 // 查询记录
-func Get(table, where interface{}, value []interface{}) (interface{}, bool) {
+func Get(table, where interface{}, value []interface{}) bool {
   // 单条记录
-  has, _ := Engine.Where(where, value...).Get(table)
-  return table, has
+  bool, _ := Engine.Where(where, value...).Get(table)
+
+  return bool
 }
 
 func Find(table interface{}) error {
-  err := Engine.Find(table)
+  err := Engine.Desc("id").Find(table)
   return err
 }
 

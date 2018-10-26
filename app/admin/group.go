@@ -32,16 +32,54 @@ func GroupList (ctx context.Context) {
   if err != nil {
     data = Utils.NewResData(404, err.Error(), ctx)
   } else {
-    data = Utils.NewResData(200, list, ctx)
+    data = Utils.NewResData(0, list, ctx)
   }
 
   ctx.JSON(data)
 
 }
 
+// 详情
+func GroupDetail (ctx context.Context) {
+  var table IdpAdminsGroup
+  ctx.ReadJSON(&table)
+
+
+  id, _ := ctx.Params().GetInt64("id")
+  has := DB.Get(&table, "id=?", []interface{}{id})
+
+  data := context.Map{}
+  if has == true {
+    data = Utils.NewResData(0, table, ctx)
+  } else {
+    data = Utils.NewResData(0, "记录不存在", ctx)
+  }
+
+  ctx.JSON(data)
+
+}
+
+// 新增
 func GroupAdd (ctx context.Context) {
   var table IdpAdminsGroup
   ctx.ReadJSON(&table)
 
   _ = DB.Post(&table)
+}
+
+// 修改
+func GroupPut (ctx context.Context) {
+  var table IdpAdminsGroup
+  ctx.ReadJSON(&table)
+
+  err := DB.Put(table.Id, table)
+
+  data := context.Map{}
+  if err == nil {
+    data = Utils.NewResData(0, "修改成功", ctx)
+  } else {
+    data = Utils.NewResData(1, "修改失败", ctx)
+  }
+
+  ctx.JSON(data)
 }

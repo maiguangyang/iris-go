@@ -54,7 +54,7 @@ func Login(ctx context.Context) {
 
     // 更新用户登陆信息
     UpdataUserLoginInfo(table)
-    data = Utils.NewResData(200, token, ctx)
+    data = Utils.NewResData(0, token, ctx)
   } else {
     data = Utils.NewResData(401, "请检查账号密码输入是否正确", ctx)
   }
@@ -103,10 +103,10 @@ func GetUserDetail(author string, ctx context.Context) context.Map {
 
   has, err := DB.Engine.Get(&table)
   if has == true {
-    return Utils.NewResData(200, table, ctx)
+    return Utils.NewResData(0, table, ctx)
   }
 
-  return Utils.NewResData(200, err, ctx)
+  return Utils.NewResData(0, err, ctx)
 }
 
 // 更新用户登陆信息

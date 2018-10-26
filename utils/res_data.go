@@ -11,7 +11,7 @@ func NewResData(code int, data interface{}, ctx context.Context) context.Map {
   var resData interface{}
   var err error
 
-  if code == 200 {
+  if code == 0 {
     msg = "success"
   } else {
     msg = "error"
