@@ -2,6 +2,7 @@ package admin
 
 import (
   // "fmt"
+  // "reflect"
   "github.com/kataras/iris/context"
 
   // Auth "../../authorization"
@@ -41,18 +42,20 @@ func GroupList (ctx context.Context) {
 
 // 详情
 func GroupDetail (ctx context.Context) {
+
   var table IdpAdminsGroup
   ctx.ReadJSON(&table)
 
-
   id, _ := ctx.Params().GetInt64("id")
+
   has := DB.Get(&table, "id=?", []interface{}{id})
+
 
   data := context.Map{}
   if has == true {
     data = Utils.NewResData(0, table, ctx)
   } else {
-    data = Utils.NewResData(0, "记录不存在", ctx)
+    data = Utils.NewResData(1, "记录不存在", ctx)
   }
 
   ctx.JSON(data)
@@ -61,18 +64,29 @@ func GroupDetail (ctx context.Context) {
 
 // 新增
 func GroupAdd (ctx context.Context) {
+
   var table IdpAdminsGroup
   ctx.ReadJSON(&table)
 
-  _ = DB.Post(&table)
+  err := DB.Post(&table)
+
+  data := context.Map{}
+  if err == nil {
+    data = Utils.NewResData(0, "添加成功", ctx)
+  } else {
+    data = Utils.NewResData(1, "添加失败", ctx)
+  }
+
+  ctx.JSON(data)
 }
 
 // 修改
 func GroupPut (ctx context.Context) {
+
   var table IdpAdminsGroup
   ctx.ReadJSON(&table)
 
-  err := DB.Put(table.Id, table)
+  err := DB.Put(table.Id, &table)
 
   data := context.Map{}
   if err == nil {

@@ -47,7 +47,7 @@ func HasInitTable() {
   }
   var group IdpAdminsGroup
   group.Name  = "超级管理员"
-  group.Value = 0
+  group.Value = 1
 
   has, _ := Engine.IsTableExist("idp_admins_group")
   empty, _  := Engine.IsTableEmpty(&group)
@@ -67,7 +67,7 @@ func HasInitTable() {
   }
   var role IdpAdminsRole
   role.Name  = "超级管理员"
-  role.Value = 0
+  role.Value = 1
 
   has, _ = Engine.IsTableExist("idp_admins_role")
   empty, _  = Engine.IsTableEmpty(&role)
@@ -92,8 +92,8 @@ func HasInitTable() {
   admin.Phone    = "13800138000"
   admin.Password = Public.EncryptPassword("123456")
   admin.Nickname = "admin"
-  admin.Groups   = 0
-  admin.Roles    = 0
+  admin.Groups   = 1
+  admin.Roles    = 1
 
   has, _ = Engine.IsTableExist("idp_admins")
   empty, _  = Engine.IsTableEmpty(&admin)
