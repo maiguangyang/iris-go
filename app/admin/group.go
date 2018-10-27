@@ -86,6 +86,23 @@ func GroupPut (ctx context.Context) {
   var table IdpAdminsGroup
   ctx.ReadJSON(&table)
 
+  // 验证参数
+  rules := Utils.Rules{
+    "Name": {
+      "required": true,
+      "rgx": "identity",
+    },
+    "Value": {
+      "rgx": "phone",
+    },
+  }
+
+  errMsgs := rules.Validate(Utils.StructToMap(table))
+  if errMsgs != nil {
+    ctx.JSON(Utils.NewResData(1, errMsgs, ctx))
+    return
+  }
+
   err := DB.Put(table.Id, &table)
 
   data := context.Map{}
