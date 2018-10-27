@@ -168,8 +168,13 @@ func Get(table, where interface{}, value []interface{}) bool {
 }
 
 func Find(table interface{}) error {
-  err := Engine.Desc("id").Find(table)
+  err   := Engine.Desc("id").Find(table)
   return err
+}
+
+func Count(table interface{}) int64 {
+  total, _ := Engine.Count(table)
+  return total
 }
 
 func CheckErr(err error) {

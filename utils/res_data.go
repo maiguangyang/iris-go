@@ -1,6 +1,8 @@
 package utils
 
 import (
+  // "fmt"
+  "math"
   "strings"
   "github.com/kataras/iris/context"
   Public "../public"
@@ -47,4 +49,24 @@ func NewResData(code int, data interface{}, ctx context.Context) context.Map {
     "msg"         : msg,
     "status_code" : 200,
   }
+}
+
+// 列表分页、总数量
+func TotalData(list interface{}, page, total int64) context.Map {
+  per_page     := 20
+  total_page   := int64(math.Ceil(float64(total) / float64(per_page)))
+
+  if page > total_page {
+    list = []context.Map{}
+  }
+
+  pageData := context.Map{
+    "total"        : total,
+    "current_page" : page,
+    "per_page"     : per_page,
+    "total_page"   : total_page,
+    "data"         : list,
+  }
+
+  return pageData
 }

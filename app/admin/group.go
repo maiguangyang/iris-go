@@ -25,15 +25,27 @@ func GroupList (ctx context.Context) {
   // userinfo, _ := Auth.DecryptToken(ctx.GetHeader("Authorization"), "admin")
   // reqData     := userinfo.(map[string]interface{})
 
+  // 获取分页
+  page := Utils.StrToInt64(ctx.URLParam("page"))
+
+  // 获取统计总数
+  var table IdpAdminsGroup
+  total := DB.Count(&table)
+
+  // 获取列表
   list := make([]IdpAdminsGroup, 0)
   err := DB.Find(&list)
 
+  // 返回数据
   data := context.Map{}
 
   if err != nil {
     data = Utils.NewResData(404, err.Error(), ctx)
   } else {
-    data = Utils.NewResData(0, list, ctx)
+
+    resData := Utils.TotalData(list, page, total)
+
+    data = Utils.NewResData(0, resData, ctx)
   }
 
   ctx.JSON(data)
