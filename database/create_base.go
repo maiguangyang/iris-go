@@ -41,7 +41,6 @@ const (
   IDP_ADMIN_GROUP = `CREATE TABLE idp_admins_group (
     id INT(11) NOT NULL AUTO_INCREMENT COMMENT 'id',
     name VARCHAR(64) NULL DEFAULT '' COMMENT '组名称',
-    value INT(2) NULL DEFAULT 1 COMMENT '用户组：1超级管理员、其他的自定义添加',
     state INT(2) NULL DEFAULT 1 COMMENT '状态：1启动、2禁用',
     deleted_at INT(11) NULL DEFAULT NULL COMMENT '删除时间',
     updated_at INT(11) NULL DEFAULT NULL COMMENT '修改时间',
@@ -52,7 +51,7 @@ const (
   IDP_ADMIN_ROLE = `CREATE TABLE idp_admins_role (
     id INT(11) NOT NULL AUTO_INCREMENT COMMENT 'id',
     name VARCHAR(64) NULL DEFAULT '' COMMENT '角色名称',
-    value INT(2) NULL DEFAULT 1 COMMENT '用户角色：1超级管理员、其他的自定义添加',
+    gid INT(11) NULL DEFAULT NULL COMMENT 'GROUP表关联Id',
     state INT(2) NULL DEFAULT 1 COMMENT '状态：1启动、2禁用',
     deleted_at INT(11) NULL DEFAULT NULL COMMENT '删除时间',
     updated_at INT(11) NULL DEFAULT NULL COMMENT '修改时间',

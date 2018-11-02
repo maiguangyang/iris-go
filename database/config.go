@@ -13,7 +13,7 @@ var Engine *xorm.Engine
 
 // 连接
 func OpenSql() error {
-  dataSourceName := "root:123456@tcp(192.168.0.234:3306)/idongpin?charset=utf8mb4"
+  dataSourceName := "root:123456@tcp(192.168.1.235:3306)/idongpin?charset=utf8mb4"
 
   var err error
 
@@ -42,15 +42,14 @@ func HasInitTable() {
   type IdpAdminsGroup struct {
     Id int64
     Name string
-    Value int64
     CreatedAt int64 `xorm:"created"`
   }
+
   var group IdpAdminsGroup
   group.Name  = "超级管理员"
-  group.Value = 1
 
-  has, _ := Engine.IsTableExist("idp_admins_group")
-  empty, _  := Engine.IsTableEmpty(&group)
+  has, _   := Engine.IsTableExist("idp_admins_group")
+  empty, _ := Engine.IsTableEmpty(&group)
 
   if has == false {
     CreateTables(IDP_ADMIN_GROUP, group)
@@ -62,15 +61,16 @@ func HasInitTable() {
   type IdpAdminsRole struct {
     Id int64
     Name string
-    Value int64
+    Gid int64
     CreatedAt int64 `xorm:"created"`
   }
-  var role IdpAdminsRole
-  role.Name  = "超级管理员"
-  role.Value = 1
 
-  has, _ = Engine.IsTableExist("idp_admins_role")
-  empty, _  = Engine.IsTableEmpty(&role)
+  var role IdpAdminsRole
+  role.Name = "超级管理员"
+  role.Gid  = 1
+
+  has, _   = Engine.IsTableExist("idp_admins_role")
+  empty, _ = Engine.IsTableEmpty(&role)
 
   if has == false {
     CreateTables(IDP_ADMIN_ROLE, role)
@@ -114,8 +114,8 @@ func HasInitTable() {
   var auth IdpAuth
   auth.Content = ""
 
-  has, _ = Engine.IsTableExist("idp_auth")
-  empty, _  = Engine.IsTableEmpty(&auth)
+  has, _   = Engine.IsTableExist("idp_auth")
+  empty, _ = Engine.IsTableEmpty(&auth)
 
   if has == false {
     CreateTables(IDP_AUTH, auth)
@@ -163,12 +163,24 @@ func Delete(table interface{}) error {
 func Get(table, where interface{}, value []interface{}) bool {
   // 单条记录
   bool, _ := Engine.Where(where, value...).Get(table)
-
   return bool
 }
 
-func Find(table interface{}) error {
-  err   := Engine.Desc("id").Find(table)
+// Exist查询记录
+func Exist(table, where interface{}, value []interface{}) bool {
+  // 单条记录
+  bool, _ := Engine.Where(where, value...).Exist(table)
+  return bool
+}
+
+// 列表
+func Find(table interface{}, page int64) error {
+  count := 2
+  limit := (int(page) - 1) * count
+
+
+  err := Engine.Desc("id").Limit(count, limit).Find(table)
+
   return err
 }
 
