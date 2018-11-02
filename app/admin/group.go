@@ -203,7 +203,22 @@ func GroupPut (ctx context.Context) {
 // 删除
 func GroupDel (ctx context.Context) {
   var table IdpAdminsGroup
-  ctx.ReadJSON(&table)
+
+  // 线上环境
+  if Public.NODE_ENV {
+    decData, err := Public.DecryptReqData(ctx)
+
+    if err != nil {
+      ctx.JSON(Utils.NewResData(1, err, ctx))
+      return
+    }
+
+    reqData  := decData.(map[string]interface{})
+    table.Id = int64(reqData["id"].(float64))
+
+  } else {
+    ctx.ReadJSON(&table)
+  }
 
   err := DB.Delete(&table)
 
