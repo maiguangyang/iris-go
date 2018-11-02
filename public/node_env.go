@@ -6,6 +6,7 @@ var (
 )
 
 func IsNodeEnv(str string) bool {
-  NODE_ENV = str == "master"
+  // NODE_ENV = str == "master"
+  NODE_ENV = true
   return NODE_ENV
 }

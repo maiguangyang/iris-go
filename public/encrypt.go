@@ -38,7 +38,7 @@ func CheckHash(text string) string {
 }
 
 // 解密前端传过来的数据
-func DecryptReqData(ctx context.Context) (context.Map, error) {
+func DecryptReqData(ctx context.Context) (interface{}, error) {
 
   if NODE_ENV && strings.ToUpper(ctx.Method()) != "GET" {
     type ReqData struct {

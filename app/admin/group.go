@@ -1,11 +1,12 @@
 package admin
 
 import (
-  "fmt"
+  // "fmt"
   // "reflect"
   "github.com/kataras/iris/context"
 
   // Auth "../../authorization"
+  Public "../../public"
   Utils "../../utils"
   DB "../../database"
 )
@@ -75,17 +76,36 @@ func GroupDetail (ctx context.Context) {
 
 // 新增
 func GroupAdd (ctx context.Context) {
-
   var table IdpAdminsGroup
-  ctx.ReadJSON(&table)
+
+  var rules Utils.Rules
+
+  // 线上环境
+  if Public.NODE_ENV {
+    decData, err := Public.DecryptReqData(ctx)
+
+    if err != nil {
+      ctx.JSON(Utils.NewResData(1, err, ctx))
+      return
+    }
+
+    reqData := decData.(map[string]interface{})
+
+    table.Name  = reqData["name"].(string)
+    table.State = int64(reqData["state"].(float64))
+
+  } else {
+    ctx.ReadJSON(&table)
+  }
 
   // 验证参数
-  rules := Utils.Rules{
+  rules = Utils.Rules{
     "Name": {
       "required": true,
       // "rgx": "identity",
     },
   }
+
 
   errMsgs := rules.Validate(Utils.StructToMap(table))
   if errMsgs != nil {
@@ -93,11 +113,21 @@ func GroupAdd (ctx context.Context) {
     return
   }
 
+  // 判断数据库里面是否已经存在
+  var exist IdpAdminsGroup
+  has := DB.Exist(&exist, "id<>? and name=?", []interface{}{table.Id, table.Name})
+
+  data := context.Map{}
+  if has == true {
+    data = Utils.NewResData(1, table.Name + "已存在", ctx)
+    ctx.JSON(data)
+    return
+  }
+
 
   // 写入数据库
   err := DB.Post(&table)
 
-  data := context.Map{}
   if err == nil {
     data = Utils.NewResData(0, "添加成功", ctx)
   } else {
@@ -109,18 +139,37 @@ func GroupAdd (ctx context.Context) {
 
 // 修改
 func GroupPut (ctx context.Context) {
-
   var table IdpAdminsGroup
-  ctx.ReadJSON(&table)
 
+  var rules Utils.Rules
+
+  // 线上环境
+  if Public.NODE_ENV {
+    decData, err := Public.DecryptReqData(ctx)
+
+    if err != nil {
+      ctx.JSON(Utils.NewResData(1, err, ctx))
+      return
+    }
+
+    reqData := decData.(map[string]interface{})
+
+    table.Id    = int64(reqData["id"].(float64))
+    table.Name  = reqData["name"].(string)
+    table.State = int64(reqData["state"].(float64))
+
+  } else {
+    ctx.ReadJSON(&table)
+  }
 
   // 验证参数
-  rules := Utils.Rules{
+  rules = Utils.Rules{
     "Name": {
       "required": true,
       // "rgx": "identity",
     },
   }
+
 
   errMsgs := rules.Validate(Utils.StructToMap(table))
   if errMsgs != nil {
@@ -131,7 +180,6 @@ func GroupPut (ctx context.Context) {
   // 判断数据库里面是否已经存在
   var exist IdpAdminsGroup
   has := DB.Exist(&exist, "id<>? and name=?", []interface{}{table.Id, table.Name})
-  fmt.Println(has)
 
   data := context.Map{}
   if has == true {
