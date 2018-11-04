@@ -19,6 +19,7 @@ func NewResData(code int, data interface{}, ctx context.Context) context.Map {
     msg = "error"
   }
 
+
   if Public.NODE_ENV && strings.ToUpper(ctx.Method()) == "GET" {
     secretKey := ctx.GetHeader("Secret-Key")
     headHash  := ctx.GetHeader("Hash")
@@ -49,6 +50,7 @@ func NewResData(code int, data interface{}, ctx context.Context) context.Map {
     "msg"         : msg,
     "status_code" : 200,
   }
+
 }
 
 // 列表分页、总数量

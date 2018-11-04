@@ -2,8 +2,10 @@ package database
 
 import (
   "fmt"
+  // "errors"
   // "reflect"
   // "database/sql"
+  "github.com/kataras/iris/context"
   _ "github.com/go-sql-driver/mysql"
   "github.com/go-xorm/xorm"
   Public "../public"
@@ -173,17 +175,25 @@ func Exist(table, where interface{}, value []interface{}) bool {
   return bool
 }
 
-// 列表
-func Find(table interface{}, page int64) error {
+// 列表 join["type"]为1的时候使用SQL语句连表
+func Find(join context.Map) error {
+  table := join["table"]
   count := 2
-  limit := (int(page) - 1) * count
+  limit := (int(join["page"].(int64)) - 1) * count
 
+  var err error = nil
 
-  err := Engine.Desc("id").Limit(count, limit).Find(table)
+  if join["type"] == 1 {
+    sqlTxt := join["sql"].(string)
+    err = Engine.Sql(sqlTxt).Desc("id").Limit(count, limit).Find(table)
+  } else {
+    err = Engine.Desc("id").Limit(count, limit).Find(table)
+  }
 
   return err
 }
 
+// 统计
 func Count(table interface{}) int64 {
   total, _ := Engine.Count(table)
   return total

@@ -90,11 +90,19 @@ func Init() {
   {
     admin.Get("/detail", Admin.Detail)                // 账户详情
 
+    // group
     admin.Get("/group", Admin.GroupList)              // 部门列表
     admin.Get("/group/{id:int64}", Admin.GroupDetail) // 部门详情
     admin.Post("/group", Admin.GroupAdd)              // 添加部门
     admin.Put("/group", Admin.GroupPut)               // 修改部门
     admin.Delete("/group", Admin.GroupDel)            // 删除部门
+
+    // role
+    admin.Get("/role", Admin.RoleList)              // 部门列表
+    admin.Get("/role/{id:int64}", Admin.RoleDetail) // 部门详情
+    admin.Post("/role", Admin.RoleAdd)              // 添加部门
+    admin.Put("/role", Admin.RolePut)               // 修改部门
+    admin.Delete("/role", Admin.RoleDel)            // 删除部门
 
     // sys.Post("/test/sqlopen", AppSyßs.TestOpen)        // 测试数据库连接
     // sys.Get("/database", AppSys.GetDatabase)          // 获取数据库库列表

@@ -11,35 +11,44 @@ import (
   DB "../../database"
 )
 
-type IdpAdminsGroup struct {
+type IdpAdminsRole struct {
   Id int64 `json:"id"`
   Name string `json:"name"`
+  Gid int64 `json:"gid"`
   State int64 `json:"state"`
   DeletedAt int64 `json:"deleted_at" xorm:"deleted"`
   UpdatedAt int64 `json:"updated_at" xorm:"updated"`
   CreatedAt int64 `json:"created_at" xorm:"created"`
 }
 
+type GroupRoleGroup struct {
+  IdpAdminsRole `xorm:"extends"`
+  Group IdpAdminsGroup `json:"group" xorm:"extends"`
+}
+
+func (GroupRoleGroup) TableName() string {
+  return "idp_admins_role"
+}
+
 
 // 用户组列表
-func GroupList (ctx context.Context) {
-
+func RoleList (ctx context.Context) {
   // 获取分页
   page := Utils.StrToInt64(ctx.URLParam("page"))
 
   // 获取统计总数
-  // var table IdpAdminsGroup
-  var table IdpAdminsGroup
+  var table GroupRoleGroup
   total := DB.Count(&table)
 
   // 获取列表
-  list := make([]IdpAdminsGroup, 0)
+  list := make([]GroupRoleGroup, 0)
   err := DB.Find(context.Map{
-    "type": 0,
+    "type": 1,
     "table": &list,
     "page": page,
-    "sql": "",
+    "sql": "select * from idp_admins_role, idp_admins_group where idp_admins_role.gid = idp_admins_group.id",
   })
+
 
   // 返回数据
   data := context.Map{}
@@ -58,9 +67,9 @@ func GroupList (ctx context.Context) {
 }
 
 // 详情
-func GroupDetail (ctx context.Context) {
+func RoleDetail (ctx context.Context) {
 
-  var table IdpAdminsGroup
+  var table IdpAdminsRole
   ctx.ReadJSON(&table)
 
   id, _ := ctx.Params().GetInt64("id")
@@ -80,8 +89,8 @@ func GroupDetail (ctx context.Context) {
 }
 
 // 新增
-func GroupAdd (ctx context.Context) {
-  var table IdpAdminsGroup
+func RoleAdd (ctx context.Context) {
+  var table IdpAdminsRole
 
   var rules Utils.Rules
 
@@ -107,7 +116,10 @@ func GroupAdd (ctx context.Context) {
   rules = Utils.Rules{
     "Name": {
       "required": true,
-      // "rgx": "identity",
+    },
+    "Gid": {
+      "required": true,
+      "rgx": "int",
     },
   }
 
@@ -119,8 +131,8 @@ func GroupAdd (ctx context.Context) {
   }
 
   // 判断数据库里面是否已经存在
-  var exist IdpAdminsGroup
-  has := DB.Exist(&exist, "id<>? and name=?", []interface{}{table.Id, table.Name})
+  var exist IdpAdminsRole
+  has := DB.Exist(&exist, "id<>? and gid=? and name=?", []interface{}{table.Id, table.Gid, table.Name})
 
   data := context.Map{}
   if has == true {
@@ -143,8 +155,8 @@ func GroupAdd (ctx context.Context) {
 }
 
 // 修改
-func GroupPut (ctx context.Context) {
-  var table IdpAdminsGroup
+func RolePut (ctx context.Context) {
+  var table IdpAdminsRole
 
   var rules Utils.Rules
 
@@ -161,6 +173,7 @@ func GroupPut (ctx context.Context) {
 
     table.Id    = int64(reqData["id"].(float64))
     table.Name  = reqData["name"].(string)
+    table.Gid   = int64(reqData["gid"].(float64))
     table.State = int64(reqData["state"].(float64))
 
   } else {
@@ -171,7 +184,10 @@ func GroupPut (ctx context.Context) {
   rules = Utils.Rules{
     "Name": {
       "required": true,
-      // "rgx": "identity",
+    },
+    "Gid": {
+      "required": true,
+      "rgx": "int",
     },
   }
 
@@ -183,8 +199,8 @@ func GroupPut (ctx context.Context) {
   }
 
   // 判断数据库里面是否已经存在
-  var exist IdpAdminsGroup
-  has := DB.Exist(&exist, "id<>? and name=?", []interface{}{table.Id, table.Name})
+  var exist IdpAdminsRole
+  has := DB.Exist(&exist, "id<>? and gid=? and name=?", []interface{}{table.Id, table.Gid, table.Name})
 
   data := context.Map{}
   if has == true {
@@ -206,8 +222,8 @@ func GroupPut (ctx context.Context) {
 }
 
 // 删除
-func GroupDel (ctx context.Context) {
-  var table IdpAdminsGroup
+func RoleDel (ctx context.Context) {
+  var table IdpAdminsRole
 
   // 线上环境
   if Public.NODE_ENV {
