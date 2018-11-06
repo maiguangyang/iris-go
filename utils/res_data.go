@@ -44,18 +44,25 @@ func NewResData(code int, data interface{}, ctx context.Context) context.Map {
     resData = data
   }
 
-  return context.Map{
+  text := context.Map{
     "code"        : code,
     "data"        : resData,
     "msg"         : msg,
     "status_code" : 200,
   }
 
+  return text
+
 }
 
-// 列表分页、总数量
-func TotalData(list interface{}, page, total int64) context.Map {
-  per_page     := 2
+// 列表、当前页、总数量、每页数量
+func TotalData(list interface{}, page, total, count int64) context.Map {
+  var per_page int64 = 20
+
+  if count > 0 {
+    per_page = count
+  }
+
   total_page   := int64(math.Ceil(float64(total) / float64(per_page)))
 
   if page > total_page {

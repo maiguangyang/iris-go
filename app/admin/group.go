@@ -14,6 +14,7 @@ import (
 type IdpAdminsGroup struct {
   Id int64 `json:"id"`
   Name string `json:"name"`
+  Aid int64 `json:"aid"`
   State int64 `json:"state"`
   DeletedAt int64 `json:"deleted_at" xorm:"deleted"`
   UpdatedAt int64 `json:"updated_at" xorm:"updated"`
@@ -25,20 +26,31 @@ type IdpAdminsGroup struct {
 func GroupList (ctx context.Context) {
 
   // 获取分页
-  page := Utils.StrToInt64(ctx.URLParam("page"))
+  page  := Utils.StrToInt64(ctx.URLParam("page"))
+  count := Utils.StrToInt64(ctx.URLParam("count"))
 
   // 获取统计总数
   // var table IdpAdminsGroup
   var table IdpAdminsGroup
-  total := DB.Count(&table)
+  // total := DB.Count(&table)
+  total := DB.Count(context.Map{
+    "type"  : 0,
+    "table" : &table,
+    "where" : "id<>?",
+    "value" : []interface{}{1},
+    "sql"   : "",
+  })
 
   // 获取列表
   list := make([]IdpAdminsGroup, 0)
   err := DB.Find(context.Map{
-    "type": 0,
-    "table": &list,
-    "page": page,
-    "sql": "",
+    "type"  : 0,
+    "table" : &list,
+    "page"  : page,
+    "count" : count,
+    "where" : "id<>?",
+    "value" : []interface{}{1},
+    "sql"   : "",
   })
 
   // 返回数据
@@ -48,7 +60,7 @@ func GroupList (ctx context.Context) {
     data = Utils.NewResData(404, err.Error(), ctx)
   } else {
 
-    resData := Utils.TotalData(list, page, total)
+    resData := Utils.TotalData(list, page, total, count)
 
     data = Utils.NewResData(0, resData, ctx)
   }
@@ -65,7 +77,14 @@ func GroupDetail (ctx context.Context) {
 
   id, _ := ctx.Params().GetInt64("id")
 
-  has := DB.Get(&table, "id=?", []interface{}{id})
+  // has := DB.Get(&table, "id=?", []interface{}{id})
+  has := DB.Get(context.Map{
+    "type": 0,
+    "table": &table,
+    "where": "id=?",
+    "value": []interface{}{id},
+    "sql": "",
+  })
 
 
   data := context.Map{}
@@ -120,7 +139,19 @@ func GroupAdd (ctx context.Context) {
 
   // 判断数据库里面是否已经存在
   var exist IdpAdminsGroup
-  has := DB.Exist(&exist, "id<>? and name=?", []interface{}{table.Id, table.Name})
+  // has := DB.Exist(&exist, "id<>? and name=?", []interface{}{table.Id, table.Name})
+  has, err := DB.Exist(context.Map{
+    "type": 0,
+    "table": &exist,
+    "where": "id<>? and name=?",
+    "value": []interface{}{table.Id, table.Name},
+    "sql": "",
+  })
+
+  if err != nil {
+    ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
+    return
+  }
 
   data := context.Map{}
   if has == true {
@@ -131,7 +162,7 @@ func GroupAdd (ctx context.Context) {
 
 
   // 写入数据库
-  err := DB.Post(&table)
+  err = DB.Post(&table)
 
   if err == nil {
     data = Utils.NewResData(0, "添加成功", ctx)
@@ -184,7 +215,19 @@ func GroupPut (ctx context.Context) {
 
   // 判断数据库里面是否已经存在
   var exist IdpAdminsGroup
-  has := DB.Exist(&exist, "id<>? and name=?", []interface{}{table.Id, table.Name})
+  // has := DB.Exist(&exist, "id<>? and name=?", []interface{}{table.Id, table.Name})
+  has, err := DB.Exist(context.Map{
+    "type": 0,
+    "table": &exist,
+    "where": "id<>? and name=?",
+    "value": []interface{}{table.Id, table.Name},
+    "sql": "",
+  })
+
+  if err != nil {
+    ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
+    return
+  }
 
   data := context.Map{}
   if has == true {
@@ -194,7 +237,7 @@ func GroupPut (ctx context.Context) {
   }
 
   // 写入数据库
-  err := DB.Put(table.Id, &table)
+  err = DB.Put(table.Id, &table)
 
   if err == nil {
     data = Utils.NewResData(0, "修改成功", ctx)
@@ -225,13 +268,13 @@ func GroupDel (ctx context.Context) {
     ctx.ReadJSON(&table)
   }
 
-  err := DB.Delete(&table)
+  err := DB.Delete(table.Id, &table)
 
   data := context.Map{}
   if err == nil {
     data = Utils.NewResData(0, "删除成功", ctx)
   } else {
-    data = Utils.NewResData(1, "删除失败", ctx)
+    data = Utils.NewResData(1, err, ctx)
   }
 
   ctx.JSON(data)

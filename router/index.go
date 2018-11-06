@@ -98,11 +98,16 @@ func Init() {
     admin.Delete("/group", Admin.GroupDel)            // 删除部门
 
     // role
-    admin.Get("/role", Admin.RoleList)              // 部门列表
-    admin.Get("/role/{id:int64}", Admin.RoleDetail) // 部门详情
-    admin.Post("/role", Admin.RoleAdd)              // 添加部门
-    admin.Put("/role", Admin.RolePut)               // 修改部门
-    admin.Delete("/role", Admin.RoleDel)            // 删除部门
+    admin.Get("/role", Admin.RoleList)              // 角色列表
+    admin.Get("/role/{id:int64}", Admin.RoleDetail) // 角色详情
+    admin.Post("/role", Admin.RoleAdd)              // 添加角色
+    admin.Put("/role", Admin.RolePut)               // 修改角色
+    admin.Delete("/role", Admin.RoleDel)            // 删除角色
+
+    // user
+    admin.Get("/user", Admin.UserList)              // 员工列表
+    admin.Delete("/user", Admin.UserDel)            // 删除员工
+
 
     // sys.Post("/test/sqlopen", AppSyßs.TestOpen)        // 测试数据库连接
     // sys.Get("/database", AppSys.GetDatabase)          // 获取数据库库列表

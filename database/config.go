@@ -2,12 +2,13 @@ package database
 
 import (
   "fmt"
-  // "errors"
+  "errors"
   // "reflect"
   // "database/sql"
   "github.com/kataras/iris/context"
   _ "github.com/go-sql-driver/mysql"
   "github.com/go-xorm/xorm"
+  Utils "../utils"
   Public "../public"
 )
 
@@ -44,11 +45,13 @@ func HasInitTable() {
   type IdpAdminsGroup struct {
     Id int64
     Name string
+    Aid int64
     CreatedAt int64 `xorm:"created"`
   }
 
   var group IdpAdminsGroup
-  group.Name  = "超级管理员"
+  group.Name = "超级管理员"
+  group.Aid  = 1
 
   has, _   := Engine.IsTableExist("idp_admins_group")
   empty, _ := Engine.IsTableEmpty(&group)
@@ -64,12 +67,14 @@ func HasInitTable() {
     Id int64
     Name string
     Gid int64
+    Aid int64
     CreatedAt int64 `xorm:"created"`
   }
 
   var role IdpAdminsRole
   role.Name = "超级管理员"
   role.Gid  = 1
+  role.Aid  = 1
 
   has, _   = Engine.IsTableExist("idp_admins_role")
   empty, _ = Engine.IsTableEmpty(&role)
@@ -85,17 +90,20 @@ func HasInitTable() {
     Id int64
     Phone string
     Password string
-    Nickname string
-    Groups int64
-    Roles int64
+    Username string
+    Gid int64
+    Rid int64
+    Aid int64
     CreatedAt int64 `xorm:"created"`
   }
+
   var admin IdpAdmins
   admin.Phone    = "13800138000"
   admin.Password = Public.EncryptPassword("123456")
-  admin.Nickname = "admin"
-  admin.Groups   = 1
-  admin.Roles    = 1
+  admin.Username = "admin"
+  admin.Gid      = 1
+  admin.Rid      = 1
+  admin.Aid      = 1
 
   has, _ = Engine.IsTableExist("idp_admins")
   empty, _  = Engine.IsTableEmpty(&admin)
@@ -104,6 +112,13 @@ func HasInitTable() {
     CreateTables(IDP_ADMIN, admin)
   } else if empty == true {
     Post(admin)
+  }
+
+  // 员工资料
+  has, _ = Engine.IsTableExist("idp_admin_archive")
+
+  if has == false {
+    CreateTables(IDP_ADMIN_ARCHIVE, nil)
   }
 
   // 权限表
@@ -132,9 +147,10 @@ func HasInitTable() {
 // 创建表
 func CreateTables(tableName string, table interface{}) {
   _, err := Engine.Exec(tableName)
+
   if err != nil {
     CheckErr(err)
-  } else {
+  } else if table != nil {
     err = Post(table)
     CheckErr(err)
   }
@@ -155,48 +171,123 @@ func Put(id int64, table interface{}) error {
 }
 
 // 删除记录
-func Delete(table interface{}) error {
-  // TODU 用户权限验证
-  _, err := Engine.Delete(table)
+func Delete(id int64, table interface{}) error {
+
+  has, err := Exist(context.Map{
+    "type": 0,
+    "table": table,
+    "where": "id=?",
+    "value": []interface{}{id},
+    "sql": "",
+  })
+
+  if err != nil {
+    return err
+  }
+
+  if has == true {
+    _, err = Engine.Delete(table)
+  } else {
+    err = errors.New("删除失败，该记录不存在")
+  }
+
   return err
 }
 
 // 查询记录
-func Get(table, where interface{}, value []interface{}) bool {
+// func Get(table, where interface{}, value []interface{}) bool {
+func Get(object context.Map) bool {
   // 单条记录
-  bool, _ := Engine.Where(where, value...).Get(table)
-  return bool
+  table := object["table"]
+  where := object["where"]
+  value := object["value"].([]interface{})
+
+  var has bool
+
+  if object["type"] == 1 {
+    sqlTxt := object["sql"].(string)
+    has, _ = Engine.Where(where, value...).Sql(sqlTxt).Get(table)
+  } else {
+    has, _ = Engine.Where(where, value...).Get(table)
+  }
+
+  return has
 }
 
 // Exist查询记录
-func Exist(table, where interface{}, value []interface{}) bool {
+// func Exist(table, where interface{}, value []interface{}) bool {
+func Exist(object context.Map) (bool, error) {
   // 单条记录
-  bool, _ := Engine.Where(where, value...).Exist(table)
-  return bool
+  table := object["table"]
+  where := object["where"]
+  value := object["value"].([]interface{})
+
+  var has bool
+  var err error = nil
+
+  if object["type"] == 1 {
+    sqlTxt := object["sql"].(string)
+    has, err = Engine.Sql(sqlTxt).Where(where, value...).Exist(table)
+  } else {
+    has, err = Engine.Where(where, value...).Exist(table)
+  }
+
+  return has, err
 }
 
 // 列表 join["type"]为1的时候使用SQL语句连表
-func Find(join context.Map) error {
-  table := join["table"]
-  count := 2
-  limit := (int(join["page"].(int64)) - 1) * count
+func Find(object context.Map) error {
+  table := object["table"]
+  var count int64 = 20
+
+  if object["count"].(int64) > 0 {
+    count = object["count"].(int64)
+  }
+
+  limit := (int(object["page"].(int64)) - 1) * int(count)
 
   var err error = nil
 
-  if join["type"] == 1 {
-    sqlTxt := join["sql"].(string)
-    err = Engine.Sql(sqlTxt).Desc("id").Limit(count, limit).Find(table)
+  if object["type"] == 1 {
+    sqlTxt := object["sql"].(string)
+    err = Engine.Sql(sqlTxt).Desc("id").Limit(int(count), limit).Find(table)
   } else {
-    err = Engine.Desc("id").Limit(count, limit).Find(table)
+    where := object["where"]
+    value := object["value"].([]interface{})
+    err = Engine.Desc("id").Where(where, value...).Limit(int(count), limit).Find(table)
   }
 
   return err
 }
 
 // 统计
-func Count(table interface{}) int64 {
-  total, _ := Engine.Count(table)
+// func Count(table interface{}) int64 {
+func Count(object context.Map) int64 {
+  // total, _ := Engine.Count(table)
+  // return total
+  table := object["table"]
+  var total int64
+
+  if object["type"] == 1 {
+    sqlTxt := object["sql"].(string)
+    res, _ := Engine.Query(sqlTxt)
+    if len(res) >= 0 {
+      data := string(res[0]["count"])
+      total = Utils.StrToInt64(data)
+    }
+  } else {
+    where := object["where"]
+    var value []interface{}
+
+    if object["value"] != nil {
+      value = object["value"].([]interface{})
+    }
+
+    total, _ = Engine.Where(where, value...).Count(table)
+  }
+
   return total
+
 }
 
 func CheckErr(err error) {

@@ -15,6 +15,7 @@ type IdpAdminsRole struct {
   Id int64 `json:"id"`
   Name string `json:"name"`
   Gid int64 `json:"gid"`
+  Aid int64 `json:"aid"`
   State int64 `json:"state"`
   DeletedAt int64 `json:"deleted_at" xorm:"deleted"`
   UpdatedAt int64 `json:"updated_at" xorm:"updated"`
@@ -34,19 +35,29 @@ func (GroupRoleGroup) TableName() string {
 // 用户组列表
 func RoleList (ctx context.Context) {
   // 获取分页
-  page := Utils.StrToInt64(ctx.URLParam("page"))
+  page  := Utils.StrToInt64(ctx.URLParam("page"))
+  count := Utils.StrToInt64(ctx.URLParam("count"))
+  list := make([]GroupRoleGroup, 0)
 
   // 获取统计总数
   var table GroupRoleGroup
-  total := DB.Count(&table)
+  // total := DB.Count(&table)
+
+  total := DB.Count(context.Map{
+    "type"  : 1,
+    "table" : &table,
+    "sql"   : "select count(*) as count from idp_admins_role as r LEFT JOIN idp_admins_group as g ON r.gid = g.id",
+  })
 
   // 获取列表
-  list := make([]GroupRoleGroup, 0)
   err := DB.Find(context.Map{
-    "type": 1,
-    "table": &list,
-    "page": page,
-    "sql": "select * from idp_admins_role, idp_admins_group where idp_admins_role.gid = idp_admins_group.id",
+    "type"  : 1,
+    "table" : &list,
+    "page"  : page,
+    "count" : count,
+    "where": "",
+    "value": []interface{}{},
+    "sql"   : "select * from idp_admins_role as r LEFT JOIN idp_admins_group as g ON r.gid = g.id order by r.id desc",
   })
 
 
@@ -57,7 +68,7 @@ func RoleList (ctx context.Context) {
     data = Utils.NewResData(404, err.Error(), ctx)
   } else {
 
-    resData := Utils.TotalData(list, page, total)
+    resData := Utils.TotalData(list, page, total, count)
 
     data = Utils.NewResData(0, resData, ctx)
   }
@@ -69,13 +80,19 @@ func RoleList (ctx context.Context) {
 // 详情
 func RoleDetail (ctx context.Context) {
 
-  var table IdpAdminsRole
+  var table GroupRoleGroup
   ctx.ReadJSON(&table)
 
   id, _ := ctx.Params().GetInt64("id")
+  // has := DB.Get(&table, "id=?", []interface{}{id})
 
-  has := DB.Get(&table, "id=?", []interface{}{id})
-
+  has := DB.Get(context.Map{
+    "type": 1,
+    "table": &table,
+    "where": "id=?",
+    "value": []interface{}{id},
+    "sql": `select * from idp_admins_role as r LEFT JOIN idp_admins_group as g ON r.gid = g.id where r.id=` + Utils.Int64ToStr(id),
+  })
 
   data := context.Map{}
   if has == true {
@@ -132,7 +149,19 @@ func RoleAdd (ctx context.Context) {
 
   // 判断数据库里面是否已经存在
   var exist IdpAdminsRole
-  has := DB.Exist(&exist, "id<>? and gid=? and name=?", []interface{}{table.Id, table.Gid, table.Name})
+  // has := DB.Exist(&exist, "id<>? and gid=? and name=?", []interface{}{table.Id, table.Gid, table.Name})
+  has, err := DB.Exist(context.Map{
+    "type": 0,
+    "table": &exist,
+    "where": "id<>? and gid=? and name=?",
+    "value": []interface{}{table.Id, table.Gid, table.Name},
+    "sql": "",
+  })
+
+  if err != nil {
+    ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
+    return
+  }
 
   data := context.Map{}
   if has == true {
@@ -143,7 +172,7 @@ func RoleAdd (ctx context.Context) {
 
 
   // 写入数据库
-  err := DB.Post(&table)
+  err = DB.Post(&table)
 
   if err == nil {
     data = Utils.NewResData(0, "添加成功", ctx)
@@ -200,7 +229,19 @@ func RolePut (ctx context.Context) {
 
   // 判断数据库里面是否已经存在
   var exist IdpAdminsRole
-  has := DB.Exist(&exist, "id<>? and gid=? and name=?", []interface{}{table.Id, table.Gid, table.Name})
+  // has := DB.Exist(&exist, "id<>? and gid=? and name=?", []interface{}{table.Id, table.Gid, table.Name})
+  has, err := DB.Exist(context.Map{
+    "type": 0,
+    "table": &exist,
+    "where": "id<>? and gid=? and name=?",
+    "value": []interface{}{table.Id, table.Gid, table.Name},
+    "sql": "",
+  })
+
+  if err != nil {
+    ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
+    return
+  }
 
   data := context.Map{}
   if has == true {
@@ -210,7 +251,7 @@ func RolePut (ctx context.Context) {
   }
 
   // 写入数据库
-  err := DB.Put(table.Id, &table)
+  err = DB.Put(table.Id, &table)
 
   if err == nil {
     data = Utils.NewResData(0, "修改成功", ctx)
@@ -241,13 +282,13 @@ func RoleDel (ctx context.Context) {
     ctx.ReadJSON(&table)
   }
 
-  err := DB.Delete(&table)
+  err := DB.Delete(table.Id, &table)
 
   data := context.Map{}
   if err == nil {
     data = Utils.NewResData(0, "删除成功", ctx)
   } else {
-    data = Utils.NewResData(1, "删除失败", ctx)
+    data = Utils.NewResData(1, err, ctx)
   }
 
   ctx.JSON(data)
