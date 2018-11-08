@@ -75,7 +75,7 @@ func Login(ctx context.Context) {
   data := context.Map{}
 
   if err != nil {
-    data = Utils.NewResData(401, err.Error(), ctx)
+    data = Utils.NewResData(1, err.Error(), ctx)
   } else if has == true {
     // 返回前端的Token
     ip := ctx.RemoteAddr()
@@ -90,10 +90,17 @@ func Login(ctx context.Context) {
     table.LoginIp  = ip
 
     // 更新用户登陆信息
-    UpdataUserLoginInfo(table)
+    // UpdataUserLoginInfo(table)
+
+    _, err := DB.Engine.Id(table.Id).Update(&table)
+    if err != nil {
+      ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
+      return
+    }
+
     data = Utils.NewResData(0, token, ctx)
   } else {
-    data = Utils.NewResData(401, "请检查账号密码输入是否正确", ctx)
+    data = Utils.NewResData(1, "请检查账号密码输入是否正确", ctx)
   }
 
   ctx.JSON(data)
@@ -115,48 +122,29 @@ func GetUserDetail(author string, ctx context.Context) context.Map {
     return context.Map{}
   }
 
-  // type IdpAdmins struct {
-  //   Id int64 `json:"id"`
-  //   Phone string `json:"phone"`
-  //   Realname string `json:"realname"`
-  //   Nickname string `json:"nickname"`
-  //   Avatar string `json:"avatar"`
-  //   Sex int64 `json:"sex"`
-  //   Identity string `json:"identity"`
-  //   Groups int64 `json:"groups"`
-  //   Roles int64 `json:"roles"`
-  //   Aid int64 `json:"aid"`
-  //   LoginCount int64 `json:"login_count"`
-  //   LoginTime int64 `json:"login_time"`
-  //   LastTime int64 `json:"last_time"`
-  //   LoginIp string `json:"login_ip"`
-  //   LastIp string `json:"last_ip"`
-  //   CreatedAt int64 `json:"created_at"`
-  //   // LoginTime int64 `xorm:"created"`
-  // }
-
-
 
   var table UserDetailGroup
 
   table.Id = int64(reqData["id"].(float64))
 
-  has := DB.Get(context.Map{
-    "type": 1,
-    "table": &table,
-    "where": "id=?",
-    "value": []interface{}{table.Id},
-    "sql": "select * from idp_admins as u LEFT JOIN idp_admins_group as g ON g.id=u.gid LEFT JOIN idp_admins_role as r ON r.id=u.rid",
-  })
-  if has == true {
-    return Utils.NewResData(0, table, ctx)
+  has, err := DB.Engine.Join("LEFT", "idp_admins_group", "idp_admins.gid = idp_admins_group.id").Join("LEFT", "idp_admins_role", "idp_admins.rid = idp_admins_role.id").Get(&table)
+  if err != nil {
+    return Utils.NewResData(1, err.Error(), ctx)
   }
 
-  return Utils.NewResData(1, "该账户不存在", ctx)
+  data := context.Map{}
+  if has == true {
+    data = Utils.NewResData(0, table, ctx)
+  } else {
+    data = Utils.NewResData(1, "该账户不存在", ctx)
+  }
+
+  return data
+
 }
 
 // 更新用户登陆信息
-func UpdataUserLoginInfo (table IdpAdmins) {
-  _ = DB.Put(table.Id, &table)
-}
+// func UpdataUserLoginInfo (table IdpAdmins) {
+//   _ = DB.Put(table.Id, &table)
+// }
 

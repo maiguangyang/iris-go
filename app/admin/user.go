@@ -41,15 +41,6 @@ func UserList (ctx context.Context) {
   list := make([]AdminsGroup, 0)
 
 
-
-  // 获取统计总数
-  var table AdminsGroup
-  data := context.Map{}
-
-  // 连表查询，下面进行了2个连表
-  joinTable  := make(map[int]map[string]string)
-
-
   // 下面开始是查询条件 where
   whereData  := ""
   whereValue :=  []interface{}{}
@@ -70,25 +61,30 @@ func UserList (ctx context.Context) {
   }
   // 查询条件结束
 
+  // 连表查询，下面进行了2个连表
+  joinTable  := make(map[int]map[string]string)
   joinTable[0] = map[string]string {
-    "type"      : "LEFT",
+    "type"  : "LEFT",
     "table" : "idp_admins_group",
-    "where"     : "idp_admins.gid = idp_admins_group.id",
+    "where" : "idp_admins.gid = idp_admins_group.id",
   }
 
   joinTable[1] = map[string]string {
-    "type"      : "LEFT",
+    "type"  : "LEFT",
     "table" : "idp_admins_role",
-    "where"     : "idp_admins.gid = idp_admins_role.id",
+    "where" : "idp_admins.gid = idp_admins_role.id",
   }
 
-  total, err := DB.Engine.Table("idp_admins").Join(joinTable[0]["type"], joinTable[0]["table"], joinTable[0]["where"]).Join(joinTable[1]["type"], joinTable[1]["table"], joinTable[1]["where"]).Where(whereData, whereValue...).Count(&table)
+  // 获取统计总数
+  var table AdminsGroup
+  data := context.Map{}
+  total, err := DB.Engine.Desc("idp_admins.id").Join(joinTable[0]["type"], joinTable[0]["table"], joinTable[0]["where"]).Join(joinTable[1]["type"], joinTable[1]["table"], joinTable[1]["where"]).Where(whereData, whereValue...).Count(&table)
 
   if err != nil {
     data = Utils.NewResData(1, err.Error(), ctx)
   } else {
     // 获取列表
-    err = DB.Engine.Table("idp_admins").Join(joinTable[0]["type"], joinTable[0]["table"], joinTable[0]["where"]).Join(joinTable[1]["type"], joinTable[1]["table"], joinTable[1]["where"]).Where(whereData, whereValue...).Limit(count, limit).Find(&list)
+    err = DB.Engine.Desc("idp_admins.id").Join(joinTable[0]["type"], joinTable[0]["table"], joinTable[0]["where"]).Join(joinTable[1]["type"], joinTable[1]["table"], joinTable[1]["where"]).Where(whereData, whereValue...).Limit(count, limit).Find(&list)
 
     // 返回数据
     if err != nil {
@@ -97,34 +93,6 @@ func UserList (ctx context.Context) {
       resData := Utils.TotalData(list, page, total, count)
       data = Utils.NewResData(0, resData, ctx)
     }
-  }
-
-  ctx.JSON(data)
-
-}
-
-// 详情
-func UserDetail (ctx context.Context) {
-
-  var table AdminsGroup
-  ctx.ReadJSON(&table)
-
-  id, _ := ctx.Params().GetInt64("id")
-  // has := DB.Get(&table, "id=?", []interface{}{id})
-
-  has := DB.Get(context.Map{
-    "type": 1,
-    "table": &table,
-    "where": "id=?",
-    "value": []interface{}{id},
-    "sql": `select * from idp_admins_role as r LEFT JOIN idp_admins_group as g ON r.gid = g.id where r.id=` + Utils.Int64ToStr(id),
-  })
-
-  data := context.Map{}
-  if has == true {
-    data = Utils.NewResData(0, table, ctx)
-  } else {
-    data = Utils.NewResData(1, "记录不存在", ctx)
   }
 
   ctx.JSON(data)
@@ -298,7 +266,23 @@ func UserDel (ctx context.Context) {
     ctx.ReadJSON(&table)
   }
 
-  err := DB.Delete(table.Id, &table)
+  // 判断数据库里面是否已经存在
+  var exist IdpAdmins
+  value := []interface{}{table.Id}
+  has, err := DB.Engine.Where("id=?", value...).Exist(&exist)
+
+  if err != nil {
+    ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
+    return
+  }
+
+  if has != true {
+    ctx.JSON(Utils.NewResData(1, "该信息不存在", ctx))
+    return
+  }
+
+  // 开始删除
+  _, err = DB.Engine.Id(table.Id).Delete(&table)
 
   data := context.Map{}
   if err == nil {

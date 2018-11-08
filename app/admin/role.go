@@ -34,43 +34,37 @@ func (GroupRoleGroup) TableName() string {
 
 // 用户组列表
 func RoleList (ctx context.Context) {
-  // 获取分页
-  page  := Utils.StrToInt64(ctx.URLParam("page"))
-  count := Utils.StrToInt(ctx.URLParam("count"))
+  // 获取分页、总数、limit
+  page, count, limit, _ := DB.Limit(ctx)
   list := make([]GroupRoleGroup, 0)
+
+  // 连表查询，下面进行了2个连表
+  joinTable  := make(map[int]map[string]string)
+  joinTable[0] = map[string]string {
+    "type"  : "LEFT",
+    "table" : "idp_admins_group",
+    "where" : "idp_admins_role.gid = idp_admins_group.id",
+  }
 
   // 获取统计总数
   var table GroupRoleGroup
-  // total := DB.Count(&table)
-
-  total := DB.Count(context.Map{
-    "type"  : 1,
-    "table" : &table,
-    "sql"   : "select count(*) as count from idp_admins_role as r LEFT JOIN idp_admins_group as g ON r.gid = g.id",
-  })
-
-  // 获取列表
-  err := DB.Find(context.Map{
-    "type"  : 1,
-    "table" : &list,
-    "page"  : page,
-    "count" : count,
-    "where": "",
-    "value": []interface{}{},
-    "sql"   : "select * from idp_admins_role as r LEFT JOIN idp_admins_group as g ON r.gid = g.id order by r.id desc",
-  })
-
-
-  // 返回数据
   data := context.Map{}
 
+  total, err := DB.Engine.Join(joinTable[0]["type"], joinTable[0]["table"], joinTable[0]["where"]).Count(&table)
+
   if err != nil {
-    data = Utils.NewResData(404, err.Error(), ctx)
+    data = Utils.NewResData(1, err.Error(), ctx)
   } else {
+    // 获取列表
+    err = DB.Engine.Desc("idp_admins_role.id").Join(joinTable[0]["type"], joinTable[0]["table"], joinTable[0]["where"]).Limit(count, limit).Find(&list)
 
-    resData := Utils.TotalData(list, page, total, count)
-
-    data = Utils.NewResData(0, resData, ctx)
+    // 返回数据
+    if err != nil {
+      data = Utils.NewResData(1, err.Error(), ctx)
+    } else {
+      resData := Utils.TotalData(list, page, total, count)
+      data = Utils.NewResData(0, resData, ctx)
+    }
   }
 
   ctx.JSON(data)
@@ -84,15 +78,13 @@ func RoleDetail (ctx context.Context) {
   ctx.ReadJSON(&table)
 
   id, _ := ctx.Params().GetInt64("id")
-  // has := DB.Get(&table, "id=?", []interface{}{id})
+  table.Id = id
 
-  has := DB.Get(context.Map{
-    "type": 1,
-    "table": &table,
-    "where": "id=?",
-    "value": []interface{}{id},
-    "sql": `select * from idp_admins_role as r LEFT JOIN idp_admins_group as g ON r.gid = g.id where r.id=` + Utils.Int64ToStr(id),
-  })
+  has, err := DB.Engine.Join("LEFT", "idp_admins_group", "idp_admins_role.gid = idp_admins_group.id").Get(&table)
+  if err != nil {
+    ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
+    return
+  }
 
   data := context.Map{}
   if has == true {
@@ -107,84 +99,19 @@ func RoleDetail (ctx context.Context) {
 
 // 新增
 func RoleAdd (ctx context.Context) {
-  var table IdpAdminsRole
-
-  var rules Utils.Rules
-
-  // 线上环境
-  if Public.NODE_ENV {
-    decData, err := Public.DecryptReqData(ctx)
-
-    if err != nil {
-      ctx.JSON(Utils.NewResData(1, err, ctx))
-      return
-    }
-
-    reqData := decData.(map[string]interface{})
-
-    table.Name  = reqData["name"].(string)
-    table.State = int64(reqData["state"].(float64))
-
-  } else {
-    ctx.ReadJSON(&table)
-  }
-
-  // 验证参数
-  rules = Utils.Rules{
-    "Name": {
-      "required": true,
-    },
-    "Gid": {
-      "required": true,
-      "rgx": "int",
-    },
-  }
-
-
-  errMsgs := rules.Validate(Utils.StructToMap(table))
-  if errMsgs != nil {
-    ctx.JSON(Utils.NewResData(1, errMsgs, ctx))
-    return
-  }
-
-  // 判断数据库里面是否已经存在
-  var exist IdpAdminsRole
-  // has := DB.Exist(&exist, "id<>? and gid=? and name=?", []interface{}{table.Id, table.Gid, table.Name})
-  has, err := DB.Exist(context.Map{
-    "type": 0,
-    "table": &exist,
-    "where": "id<>? and gid=? and name=?",
-    "value": []interface{}{table.Id, table.Gid, table.Name},
-    "sql": "",
-  })
-
-  if err != nil {
-    ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
-    return
-  }
-
-  data := context.Map{}
-  if has == true {
-    data = Utils.NewResData(1, table.Name + "已存在", ctx)
-    ctx.JSON(data)
-    return
-  }
-
-
-  // 写入数据库
-  err = DB.Post(&table)
-
-  if err == nil {
-    data = Utils.NewResData(0, "添加成功", ctx)
-  } else {
-    data = Utils.NewResData(1, "添加失败", ctx)
-  }
-
+  data := sumbitRoleData(0, ctx)
   ctx.JSON(data)
 }
 
 // 修改
 func RolePut (ctx context.Context) {
+  data := sumbitRoleData(1, ctx)
+  ctx.JSON(data)
+}
+
+
+// 提交数据 0新增、1修改
+func sumbitRoleData(tye int, ctx context.Context) context.Map {
   var table IdpAdminsRole
 
   var rules Utils.Rules
@@ -194,8 +121,7 @@ func RolePut (ctx context.Context) {
     decData, err := Public.DecryptReqData(ctx)
 
     if err != nil {
-      ctx.JSON(Utils.NewResData(1, err, ctx))
-      return
+      return Utils.NewResData(1, err.Error(), ctx)
     }
 
     reqData := decData.(map[string]interface{})
@@ -223,43 +149,38 @@ func RolePut (ctx context.Context) {
 
   errMsgs := rules.Validate(Utils.StructToMap(table))
   if errMsgs != nil {
-    ctx.JSON(Utils.NewResData(1, errMsgs, ctx))
-    return
+    return Utils.NewResData(1, errMsgs, ctx)
   }
 
   // 判断数据库里面是否已经存在
   var exist IdpAdminsRole
-  // has := DB.Exist(&exist, "id<>? and gid=? and name=?", []interface{}{table.Id, table.Gid, table.Name})
-  has, err := DB.Exist(context.Map{
-    "type": 0,
-    "table": &exist,
-    "where": "id<>? and gid=? and name=?",
-    "value": []interface{}{table.Id, table.Gid, table.Name},
-    "sql": "",
-  })
+  value := []interface{}{table.Id, table.Gid, table.Name}
+  has, err := DB.Engine.Where("id<>? and gid=? and name=?", value...).Exist(&exist)
 
   if err != nil {
-    ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
-    return
+    return Utils.NewResData(1, err.Error(), ctx)
   }
 
-  data := context.Map{}
   if has == true {
-    data = Utils.NewResData(1, table.Name + "已存在", ctx)
-    ctx.JSON(data)
-    return
+    return Utils.NewResData(1, table.Name + "已存在", ctx)
   }
 
   // 写入数据库
-  err = DB.Put(table.Id, &table)
-
-  if err == nil {
-    data = Utils.NewResData(0, "修改成功", ctx)
+  tipsText := "添加"
+  if tye == 1 {
+    tipsText = "修改"
+    // 修改
+    _, err = DB.Engine.Id(table.Id).Update(&table)
   } else {
-    data = Utils.NewResData(1, "修改失败", ctx)
+    // 新增
+    _, err = DB.Engine.Insert(&table)
   }
 
-  ctx.JSON(data)
+  if err != nil {
+    return Utils.NewResData(1, tipsText + "失败", ctx)
+  }
+
+  return Utils.NewResData(0, tipsText + "成功", ctx)
 }
 
 // 删除
@@ -271,7 +192,7 @@ func RoleDel (ctx context.Context) {
     decData, err := Public.DecryptReqData(ctx)
 
     if err != nil {
-      ctx.JSON(Utils.NewResData(1, err, ctx))
+      ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
       return
     }
 
@@ -282,13 +203,29 @@ func RoleDel (ctx context.Context) {
     ctx.ReadJSON(&table)
   }
 
-  err := DB.Delete(table.Id, &table)
+  // 判断数据库里面是否已经存在
+  var exist IdpAdminsRole
+  value := []interface{}{table.Id}
+  has, err := DB.Engine.Where("id=?", value...).Exist(&exist)
+
+  if err != nil {
+    ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
+    return
+  }
+
+  if has != true {
+    ctx.JSON(Utils.NewResData(1, "该信息不存在", ctx))
+    return
+  }
+
+  // 开始删除
+  _, err = DB.Engine.Id(table.Id).Delete(&table)
 
   data := context.Map{}
   if err == nil {
     data = Utils.NewResData(0, "删除成功", ctx)
   } else {
-    data = Utils.NewResData(1, err, ctx)
+    data = Utils.NewResData(1, err.Error(), ctx)
   }
 
   ctx.JSON(data)

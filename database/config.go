@@ -2,7 +2,6 @@ package database
 
 import (
   "fmt"
-  "errors"
   // "reflect"
   // "database/sql"
   "encoding/json"
@@ -164,103 +163,6 @@ func Post(table interface{}) error {
   return err
 }
 
-// 更新数据
-func Put(id int64, table interface{}) error {
-  // TODU 用户权限验证
-  _, err := Engine.Id(id).Update(table)
-  return err
-}
-
-// 删除记录
-func Delete(id int64, table interface{}) error {
-
-  has, err := Exist(context.Map{
-    "type": 0,
-    "table": table,
-    "where": "id=?",
-    "value": []interface{}{id},
-    "sql": "",
-  })
-
-  if err != nil {
-    return err
-  }
-
-  if has == true {
-    _, err = Engine.Delete(table)
-  } else {
-    err = errors.New("删除失败，该记录不存在")
-  }
-
-  return err
-}
-
-// 查询记录
-// func Get(table, where interface{}, value []interface{}) bool {
-func Get(object context.Map) bool {
-  // 单条记录
-  table := object["table"]
-  where := object["where"]
-  value := object["value"].([]interface{})
-
-  var has bool
-
-  if object["type"] == 1 {
-    sqlTxt := object["sql"].(string)
-    has, _ = Engine.Where(where, value...).Sql(sqlTxt).Get(table)
-  } else {
-    has, _ = Engine.Where(where, value...).Get(table)
-  }
-
-  return has
-}
-
-// Exist查询记录
-// func Exist(table, where interface{}, value []interface{}) bool {
-func Exist(object context.Map) (bool, error) {
-  // 单条记录
-  table := object["table"]
-  where := object["where"]
-  value := object["value"].([]interface{})
-
-  var has bool
-  var err error = nil
-
-  if object["type"] == 1 {
-    sqlTxt := object["sql"].(string)
-    has, err = Engine.Sql(sqlTxt).Where(where, value...).Exist(table)
-  } else {
-    has, err = Engine.Where(where, value...).Exist(table)
-  }
-
-  return has, err
-}
-
-// 列表 join["type"]为1的时候使用SQL语句连表
-func Find(object context.Map) error {
-  table := object["table"]
-  var count int64 = 20
-
-  if object["count"].(int64) > 0 {
-    count = object["count"].(int64)
-  }
-
-  limit := (int(object["page"].(int64)) - 1) * int(count)
-
-  var err error = nil
-
-  if object["type"] == 1 {
-    sqlTxt := object["sql"].(string)
-    err = Engine.Sql(sqlTxt).Desc("id").Limit(int(count), limit).Find(table)
-  } else {
-    where := object["where"]
-    value := object["value"].([]interface{})
-    err = Engine.Desc("id").Where(where, value...).Limit(int(count), limit).Find(table)
-  }
-
-  return err
-}
-
 // 返回分页、总数、limit
 func Limit(ctx context.Context) (int64, int, int, map[string]interface{}) {
   page    := Utils.StrToInt64(ctx.URLParam("page"))
@@ -291,35 +193,6 @@ func IsWhereEmpty(data, str interface{}) string {
   return " " + str.(string)
 }
 
-// 统计
-// func Count(table interface{}) int64 {
-func Count(object context.Map) int64 {
-  // total, _ := Engine.Count(table)
-  // return total
-  table := object["table"]
-  var total int64
-
-  if object["type"] == 1 {
-    sqlTxt := object["sql"].(string)
-    res, _ := Engine.Query(sqlTxt)
-    if len(res) >= 0 {
-      data := string(res[0]["count"])
-      total = Utils.StrToInt64(data)
-    }
-  } else {
-    where := object["where"]
-    var value []interface{}
-
-    if object["value"] != nil {
-      value = object["value"].([]interface{})
-    }
-
-    total, _ = Engine.Where(where, value...).Count(table)
-  }
-
-  return total
-
-}
 
 func CheckErr(err error) {
   if err != nil {

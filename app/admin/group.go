@@ -52,7 +52,6 @@ func GroupList (ctx context.Context) {
 
   ctx.JSON(data)
 
-
 }
 
 // 详情
@@ -83,18 +82,18 @@ func GroupDetail (ctx context.Context) {
 
 // 新增
 func GroupAdd (ctx context.Context) {
-  data := sumbitData(0, ctx)
+  data := sumbitGroupData(0, ctx)
   ctx.JSON(data)
 }
 
 // 修改
 func GroupPut (ctx context.Context) {
-  data := sumbitData(1, ctx)
+  data := sumbitGroupData(1, ctx)
   ctx.JSON(data)
 }
 
 // 提交数据 0新增、1修改
-func sumbitData(tye int, ctx context.Context) context.Map {
+func sumbitGroupData(tye int, ctx context.Context) context.Map {
   var table IdpAdminsGroup
 
   var rules Utils.Rules
@@ -171,7 +170,7 @@ func GroupDel (ctx context.Context) {
     decData, err := Public.DecryptReqData(ctx)
 
     if err != nil {
-      ctx.JSON(Utils.NewResData(1, err, ctx))
+      ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
       return
     }
 
@@ -182,13 +181,29 @@ func GroupDel (ctx context.Context) {
     ctx.ReadJSON(&table)
   }
 
-  err := DB.Delete(table.Id, &table)
+  // 判断数据库里面是否已经存在
+  var exist IdpAdminsGroup
+  value := []interface{}{table.Id}
+  has, err := DB.Engine.Where("id=?", value...).Exist(&exist)
+
+  if err != nil {
+    ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
+    return
+  }
+
+  if has != true {
+    ctx.JSON(Utils.NewResData(1, "该信息不存在", ctx))
+    return
+  }
+
+  // 开始删除
+  _, err = DB.Engine.Id(table.Id).Delete(&table)
 
   data := context.Map{}
   if err == nil {
     data = Utils.NewResData(0, "删除成功", ctx)
   } else {
-    data = Utils.NewResData(1, err, ctx)
+    data = Utils.NewResData(1, err.Error(), ctx)
   }
 
   ctx.JSON(data)
