@@ -56,11 +56,11 @@ func NewResData(code int, data interface{}, ctx context.Context) context.Map {
 }
 
 // 列表、当前页、总数量、每页数量
-func TotalData(list interface{}, page, total, count int64) context.Map {
+func TotalData(list interface{}, page, total int64, count int) context.Map {
   var per_page int64 = 20
 
   if count > 0 {
-    per_page = count
+    per_page = int64(count)
   }
 
   total_page   := int64(math.Ceil(float64(total) / float64(per_page)))

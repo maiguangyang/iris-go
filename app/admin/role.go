@@ -36,7 +36,7 @@ func (GroupRoleGroup) TableName() string {
 func RoleList (ctx context.Context) {
   // 获取分页
   page  := Utils.StrToInt64(ctx.URLParam("page"))
-  count := Utils.StrToInt64(ctx.URLParam("count"))
+  count := Utils.StrToInt(ctx.URLParam("count"))
   list := make([]GroupRoleGroup, 0)
 
   // 获取统计总数

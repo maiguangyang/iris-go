@@ -22,22 +22,6 @@ func StructToMap(obj interface{}) map[string]interface{} {
   return data
 }
 
-func IsEmpty(v interface{}) bool {
-  if v == nil {
-    return true
-  }
-
-  switch v.(type) {
-  case string:
-    if v == "" {
-      return true
-    }
-  default:
-    return false
-  }
-  return false
-}
-
 func (rs Rules) Validate(d context.Map) interface{} {
 
   var errMsgs []context.Map

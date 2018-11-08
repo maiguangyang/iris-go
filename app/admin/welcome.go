@@ -33,6 +33,7 @@ type IdpAdmins struct {
   Gid int64 `json:"gid"`
   Rid int64 `json:"rid"`
   Aid int64 `json:"aid"`
+  Money int64 `json:"money" xorm:"default(0)"`
   State int64 `json:"state"`
   JobState int64 `json:"job_state"`
   LoginCount int64 `json:"login_count" xorm:"version"`
@@ -40,6 +41,8 @@ type IdpAdmins struct {
   LastTime int64 `json:"last_time"`
   LoginIp string `json:"login_ip"`
   LastIp string `json:"last_ip"`
+  EntryTime int64 `json:"entry_time"`
+  QuitTime int64 `json:"quit_time"`
   DeletedAt int64 `json:"deleted_at" xorm:"deleted"`
   UpdatedAt int64 `json:"updated_at" xorm:"updated"`
   CreatedAt int64 `json:"created_at" xorm:"created"`

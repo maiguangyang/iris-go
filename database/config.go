@@ -5,6 +5,7 @@ import (
   "errors"
   // "reflect"
   // "database/sql"
+  "encoding/json"
   "github.com/kataras/iris/context"
   _ "github.com/go-sql-driver/mysql"
   "github.com/go-xorm/xorm"
@@ -258,6 +259,36 @@ func Find(object context.Map) error {
   }
 
   return err
+}
+
+// 返回分页、总数、limit
+func Limit(ctx context.Context) (int64, int, int, map[string]interface{}) {
+  page    := Utils.StrToInt64(ctx.URLParam("page"))
+  count   := Utils.StrToInt(ctx.URLParam("count"))
+  filters := ctx.URLParam("filters")
+
+  var dat map[string]interface{}
+  _ = json.Unmarshal([]byte(filters), &dat)
+
+  if page <= 0 {
+    page = 1
+  }
+
+  if count <= 0 {
+    count = 20
+  }
+
+  limit := (int(page) - 1) * int(count)
+
+  return page, count, limit, dat
+}
+
+func IsWhereEmpty(data, str interface{}) string {
+
+  if data.(string) != "" {
+    return data.(string) + " and " + str.(string)
+  }
+  return " " + str.(string)
 }
 
 // 统计

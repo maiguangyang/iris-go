@@ -1,8 +1,9 @@
 package admin
 
 import (
-  // "fmt"
+  "fmt"
   // "reflect"
+  "encoding/json"
   "github.com/kataras/iris/context"
 
   // Auth "../../authorization"
@@ -10,17 +11,6 @@ import (
   Utils "../../utils"
   DB "../../database"
 )
-
-// type IdpAdmins struct {
-//   Id int64 `json:"id"`
-//   Name string `json:"name"`
-//   Gid int64 `json:"gid"`
-//   Aid int64 `json:"aid"`
-//   State int64 `json:"state"`
-//   DeletedAt int64 `json:"deleted_at" xorm:"deleted"`
-//   UpdatedAt int64 `json:"updated_at" xorm:"updated"`
-//   CreatedAt int64 `json:"created_at" xorm:"created"`
-// }
 
 type AdminsGroup struct {
   IdpAdmins `xorm:"extends"`
@@ -32,44 +22,81 @@ func (AdminsGroup) TableName() string {
   return "idp_admins"
 }
 
+
+func formFilter(ctx context.Context) {
+
+  data := ctx.URLParam("filters")
+  var dat [][3]string
+
+  _ = json.Unmarshal([]byte(data), &dat)
+  fmt.Println(dat)
+
+}
+
+
 // 用户组列表
 func UserList (ctx context.Context) {
-  // 获取分页
-  page  := Utils.StrToInt64(ctx.URLParam("page"))
-  count := Utils.StrToInt64(ctx.URLParam("count"))
+  // 获取分页、总数、limit
+  page, count, limit, filters := DB.Limit(ctx)
   list := make([]AdminsGroup, 0)
+
+
 
   // 获取统计总数
   var table AdminsGroup
-  // total := DB.Count(&table)
-
-  total := DB.Count(context.Map{
-    "type"  : 1,
-    "table" : &table,
-    "sql"   : "select count(*) from idp_admins as a LEFT JOIN idp_admins_group as g ON a.gid = g.id LEFT JOIN idp_admins_role as r ON a.rid = r.id",
-  })
-
-  // 获取列表
-  err := DB.Find(context.Map{
-    "type"  : 1,
-    "table" : &list,
-    "page"  : page,
-    "count" : count,
-    "where": "",
-    "value": []interface{}{},
-    "sql"   : "select * from idp_admins as a LEFT JOIN idp_admins_group as g ON a.gid = g.id LEFT JOIN idp_admins_role as r ON a.rid = r.id order by a.id desc",
-  })
-
-  // 返回数据
   data := context.Map{}
 
+  // 连表查询，下面进行了2个连表
+  joinTable  := make(map[int]map[string]string)
+
+
+  // 下面开始是查询条件 where
+  whereData  := ""
+  whereValue :=  []interface{}{}
+
+  start_time := filters["start_time"]
+  end_time   := filters["end_time"]
+  phone      := filters["phone"]
+
+  if !Utils.IsEmpty(start_time) && !Utils.IsEmpty(end_time) {
+    whereData = DB.IsWhereEmpty(whereData, `idp_admins.entry_time >= ? and idp_admins.entry_time <= ?`)
+    whereValue = append(whereValue, start_time, end_time)
+  }
+
+
+  if !Utils.IsEmpty(phone) {
+    whereData = DB.IsWhereEmpty(whereData, `idp_admins.phone = ?`)
+    whereValue = append(whereValue, phone)
+  }
+  // 查询条件结束
+
+  joinTable[0] = map[string]string {
+    "type"      : "LEFT",
+    "table" : "idp_admins_group",
+    "where"     : "idp_admins.gid = idp_admins_group.id",
+  }
+
+  joinTable[1] = map[string]string {
+    "type"      : "LEFT",
+    "table" : "idp_admins_role",
+    "where"     : "idp_admins.gid = idp_admins_role.id",
+  }
+
+  total, err := DB.Engine.Table("idp_admins").Join(joinTable[0]["type"], joinTable[0]["table"], joinTable[0]["where"]).Join(joinTable[1]["type"], joinTable[1]["table"], joinTable[1]["where"]).Where(whereData, whereValue...).Count(&table)
+
   if err != nil {
-    data = Utils.NewResData(404, err.Error(), ctx)
+    data = Utils.NewResData(1, err.Error(), ctx)
   } else {
+    // 获取列表
+    err = DB.Engine.Table("idp_admins").Join(joinTable[0]["type"], joinTable[0]["table"], joinTable[0]["where"]).Join(joinTable[1]["type"], joinTable[1]["table"], joinTable[1]["where"]).Where(whereData, whereValue...).Limit(count, limit).Find(&list)
 
-    resData := Utils.TotalData(list, page, total, count)
-
-    data = Utils.NewResData(0, resData, ctx)
+    // 返回数据
+    if err != nil {
+      data = Utils.NewResData(1, err.Error(), ctx)
+    } else {
+      resData := Utils.TotalData(list, page, total, count)
+      data = Utils.NewResData(0, resData, ctx)
+    }
   }
 
   ctx.JSON(data)

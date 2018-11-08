@@ -24,70 +24,53 @@ type IdpAdminsGroup struct {
 
 // 用户组列表
 func GroupList (ctx context.Context) {
+  // 获取分页、总数、limit
+  page, count, limit, _ := DB.Limit(ctx)
+  list := make([]IdpAdminsGroup, 0)
 
-  // 获取分页
-  page  := Utils.StrToInt64(ctx.URLParam("page"))
-  count := Utils.StrToInt64(ctx.URLParam("count"))
 
   // 获取统计总数
-  // var table IdpAdminsGroup
   var table IdpAdminsGroup
-  // total := DB.Count(&table)
-  total := DB.Count(context.Map{
-    "type"  : 0,
-    "table" : &table,
-    "where" : "id<>?",
-    "value" : []interface{}{1},
-    "sql"   : "",
-  })
-
-  // 获取列表
-  list := make([]IdpAdminsGroup, 0)
-  err := DB.Find(context.Map{
-    "type"  : 0,
-    "table" : &list,
-    "page"  : page,
-    "count" : count,
-    "where" : "id<>?",
-    "value" : []interface{}{1},
-    "sql"   : "",
-  })
-
-  // 返回数据
   data := context.Map{}
 
+  total, err := DB.Engine.Count(&table)
+
   if err != nil {
-    data = Utils.NewResData(404, err.Error(), ctx)
+    data = Utils.NewResData(1, err.Error(), ctx)
   } else {
+    // 获取列表
+    err = DB.Engine.Desc("id").Limit(count, limit).Find(&list)
 
-    resData := Utils.TotalData(list, page, total, count)
-
-    data = Utils.NewResData(0, resData, ctx)
+    // 返回数据
+    if err != nil {
+      data = Utils.NewResData(1, err.Error(), ctx)
+    } else {
+      resData := Utils.TotalData(list, page, total, count)
+      data = Utils.NewResData(0, resData, ctx)
+    }
   }
 
   ctx.JSON(data)
+
 
 }
 
 // 详情
 func GroupDetail (ctx context.Context) {
-
   var table IdpAdminsGroup
   ctx.ReadJSON(&table)
 
   id, _ := ctx.Params().GetInt64("id")
-
-  // has := DB.Get(&table, "id=?", []interface{}{id})
-  has := DB.Get(context.Map{
-    "type": 0,
-    "table": &table,
-    "where": "id=?",
-    "value": []interface{}{id},
-    "sql": "",
-  })
-
+  table.Id = id
 
   data := context.Map{}
+
+  has, err := DB.Engine.Get(&table)
+  if err != nil {
+    ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
+    return
+  }
+
   if has == true {
     data = Utils.NewResData(0, table, ctx)
   } else {
@@ -100,81 +83,18 @@ func GroupDetail (ctx context.Context) {
 
 // 新增
 func GroupAdd (ctx context.Context) {
-  var table IdpAdminsGroup
-
-  var rules Utils.Rules
-
-  // 线上环境
-  if Public.NODE_ENV {
-    decData, err := Public.DecryptReqData(ctx)
-
-    if err != nil {
-      ctx.JSON(Utils.NewResData(1, err, ctx))
-      return
-    }
-
-    reqData := decData.(map[string]interface{})
-
-    table.Name  = reqData["name"].(string)
-    table.State = int64(reqData["state"].(float64))
-
-  } else {
-    ctx.ReadJSON(&table)
-  }
-
-  // 验证参数
-  rules = Utils.Rules{
-    "Name": {
-      "required": true,
-      // "rgx": "identity",
-    },
-  }
-
-
-  errMsgs := rules.Validate(Utils.StructToMap(table))
-  if errMsgs != nil {
-    ctx.JSON(Utils.NewResData(1, errMsgs, ctx))
-    return
-  }
-
-  // 判断数据库里面是否已经存在
-  var exist IdpAdminsGroup
-  // has := DB.Exist(&exist, "id<>? and name=?", []interface{}{table.Id, table.Name})
-  has, err := DB.Exist(context.Map{
-    "type": 0,
-    "table": &exist,
-    "where": "id<>? and name=?",
-    "value": []interface{}{table.Id, table.Name},
-    "sql": "",
-  })
-
-  if err != nil {
-    ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
-    return
-  }
-
-  data := context.Map{}
-  if has == true {
-    data = Utils.NewResData(1, table.Name + "已存在", ctx)
-    ctx.JSON(data)
-    return
-  }
-
-
-  // 写入数据库
-  err = DB.Post(&table)
-
-  if err == nil {
-    data = Utils.NewResData(0, "添加成功", ctx)
-  } else {
-    data = Utils.NewResData(1, "添加失败", ctx)
-  }
-
+  data := sumbitData(0, ctx)
   ctx.JSON(data)
 }
 
 // 修改
 func GroupPut (ctx context.Context) {
+  data := sumbitData(1, ctx)
+  ctx.JSON(data)
+}
+
+// 提交数据 0新增、1修改
+func sumbitData(tye int, ctx context.Context) context.Map {
   var table IdpAdminsGroup
 
   var rules Utils.Rules
@@ -184,8 +104,7 @@ func GroupPut (ctx context.Context) {
     decData, err := Public.DecryptReqData(ctx)
 
     if err != nil {
-      ctx.JSON(Utils.NewResData(1, err, ctx))
-      return
+      return Utils.NewResData(1, err.Error(), ctx)
     }
 
     reqData := decData.(map[string]interface{})
@@ -209,43 +128,38 @@ func GroupPut (ctx context.Context) {
 
   errMsgs := rules.Validate(Utils.StructToMap(table))
   if errMsgs != nil {
-    ctx.JSON(Utils.NewResData(1, errMsgs, ctx))
-    return
+    return Utils.NewResData(1, errMsgs, ctx)
   }
 
   // 判断数据库里面是否已经存在
   var exist IdpAdminsGroup
-  // has := DB.Exist(&exist, "id<>? and name=?", []interface{}{table.Id, table.Name})
-  has, err := DB.Exist(context.Map{
-    "type": 0,
-    "table": &exist,
-    "where": "id<>? and name=?",
-    "value": []interface{}{table.Id, table.Name},
-    "sql": "",
-  })
+  value := []interface{}{table.Id, table.Name}
+  has, err := DB.Engine.Where("id<>? and name=?", value...).Exist(&exist)
 
   if err != nil {
-    ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
-    return
+    return Utils.NewResData(1, err.Error(), ctx)
   }
 
-  data := context.Map{}
   if has == true {
-    data = Utils.NewResData(1, table.Name + "已存在", ctx)
-    ctx.JSON(data)
-    return
+    return Utils.NewResData(1, table.Name + "已存在", ctx)
   }
 
   // 写入数据库
-  err = DB.Put(table.Id, &table)
-
-  if err == nil {
-    data = Utils.NewResData(0, "修改成功", ctx)
+  tipsText := "添加"
+  if tye == 1 {
+    tipsText = "修改"
+    // 修改
+    _, err = DB.Engine.Id(table.Id).Update(&table)
   } else {
-    data = Utils.NewResData(1, "修改失败", ctx)
+    // 新增
+    _, err = DB.Engine.Insert(&table)
   }
 
-  ctx.JSON(data)
+  if err != nil {
+    return Utils.NewResData(1, tipsText + "失败", ctx)
+  }
+
+  return Utils.NewResData(0, tipsText + "成功", ctx)
 }
 
 // 删除
