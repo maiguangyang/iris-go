@@ -14,8 +14,8 @@ import (
 
 type AdminsGroup struct {
   IdpAdmins `xorm:"extends"`
-  Group IdpAdminsGroup `json:"group" xorm:"extends"`
-  Role IdpAdminsRole `json:"role" xorm:"extends"`
+  Role IdpAdminsGroup `json:"role" xorm:"extends"`
+  Group IdpAdminsRole `json:"group" xorm:"extends"`
 }
 
 func (AdminsGroup) TableName() string {
@@ -65,14 +65,14 @@ func UserList (ctx context.Context) {
   joinTable  := make(map[int]map[string]string)
   joinTable[0] = map[string]string {
     "type"  : "LEFT",
-    "table" : "idp_admins_group",
-    "where" : "idp_admins.gid = idp_admins_group.id",
+    "table" : "idp_admins_role",
+    "where" : "idp_admins.rid = idp_admins_role.id",
   }
 
   joinTable[1] = map[string]string {
     "type"  : "LEFT",
-    "table" : "idp_admins_role",
-    "where" : "idp_admins.gid = idp_admins_role.id",
+    "table" : "idp_admins_group",
+    "where" : "idp_admins_role.gid = idp_admins_group.id",
   }
 
   // 获取统计总数
@@ -268,8 +268,7 @@ func UserDel (ctx context.Context) {
 
   // 判断数据库里面是否已经存在
   var exist IdpAdmins
-  value := []interface{}{table.Id}
-  has, err := DB.Engine.Where("id=?", value...).Exist(&exist)
+  has, err := DB.Engine.Where("id=?", table.Id).Exist(&exist)
 
   if err != nil {
     ctx.JSON(Utils.NewResData(1, err.Error(), ctx))

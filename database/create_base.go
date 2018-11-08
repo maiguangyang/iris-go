@@ -21,7 +21,6 @@ const (
     password VARCHAR(64) NULL DEFAULT '' COMMENT '登录密码',
     username VARCHAR(64) NULL DEFAULT '' COMMENT '姓名',
     sex int(2) DEFAULT 0 COMMENT '性别：0未知、1男、2女',
-    gid INT(2) NULL DEFAULT 1 COMMENT '所属部门：idp_admins_group表id',
     rid INT(2) NULL DEFAULT 1 COMMENT '部门职位：idp_admins_role表id',
     money int(11) DEFAULT NULL COMMENT '月薪',
     entry_time INT(11) NULL DEFAULT NULL COMMENT '入职时间',

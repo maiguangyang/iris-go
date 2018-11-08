@@ -183,8 +183,7 @@ func GroupDel (ctx context.Context) {
 
   // 判断数据库里面是否已经存在
   var exist IdpAdminsGroup
-  value := []interface{}{table.Id}
-  has, err := DB.Engine.Where("id=?", value...).Exist(&exist)
+  has, err := DB.Engine.Where("id=?", table.Id).Exist(&exist)
 
   if err != nil {
     ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
@@ -195,6 +194,21 @@ func GroupDel (ctx context.Context) {
     ctx.JSON(Utils.NewResData(1, "该信息不存在", ctx))
     return
   }
+
+  // 判断角色管理表是否存在，如果存在的话，不予删除
+  var roleExist IdpAdminsRole
+  has, err = DB.Engine.Where("gid=?", table.Id).Exist(&roleExist)
+
+  if err != nil {
+    ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
+    return
+  }
+
+  if has == true {
+    ctx.JSON(Utils.NewResData(1, "无法删除，角色管理中使用了该值", ctx))
+    return
+  }
+
 
   // 开始删除
   _, err = DB.Engine.Id(table.Id).Delete(&table)

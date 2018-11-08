@@ -91,7 +91,6 @@ func HasInitTable() {
     Phone string
     Password string
     Username string
-    Gid int64
     Rid int64
     Aid int64
     CreatedAt int64 `xorm:"created"`
@@ -101,7 +100,6 @@ func HasInitTable() {
   admin.Phone    = "13800138000"
   admin.Password = Public.EncryptPassword("123456")
   admin.Username = "admin"
-  admin.Gid      = 1
   admin.Rid      = 1
   admin.Aid      = 1
 

@@ -30,8 +30,8 @@ type IdpAdmins struct {
   Password string `json:"password" xorm:"-"`
   Username string `json:"username"`
   Sex int64 `json:"sex"`
-  Gid int64 `json:"gid"`
-  Rid int64 `json:"rid"`
+  // Gid int64 `json:"gid"`
+  // Rid int64 `json:"rid"`
   Aid int64 `json:"aid"`
   Money int64 `json:"money" xorm:"default(0)"`
   State int64 `json:"state"`
@@ -52,8 +52,8 @@ type IdpAdmins struct {
 
 
 type UserDetailGroup struct {
-  Group IdpAdminsGroup `json:"group" xorm:"extends"`
-  Role IdpAdminsRole `json:"role" xorm:"extends"`
+  Role IdpAdminsGroup `json:"role" xorm:"extends"`
+  Group IdpAdminsRole `json:"group" xorm:"extends"`
   IdpAdmins `xorm:"extends"`
 }
 
@@ -127,7 +127,7 @@ func GetUserDetail(author string, ctx context.Context) context.Map {
 
   table.Id = int64(reqData["id"].(float64))
 
-  has, err := DB.Engine.Join("LEFT", "idp_admins_group", "idp_admins.gid = idp_admins_group.id").Join("LEFT", "idp_admins_role", "idp_admins.rid = idp_admins_role.id").Get(&table)
+  has, err := DB.Engine.Join("LEFT", "idp_admins_role", "idp_admins.rid = idp_admins_role.id").Join("LEFT", "idp_admins_group", "idp_admins_role.gid = idp_admins_group.id").Get(&table)
   if err != nil {
     return Utils.NewResData(1, err.Error(), ctx)
   }
