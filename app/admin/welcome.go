@@ -11,27 +11,14 @@ import(
   DB "../../database"
 )
 
-// type IdpAdmins struct {
-//   Id int64 `json:"id"`
-//   Phone string `json:"phone"`
-//   Password string `json:"password"`
-//   State int64 `json:"state"`
-//   LoginCount int64 `xorm:"version"`
-//   LoginTime int64 `xorm:"updated"`
-//   LastTime int64 `json:"last_time"`
-//   LoginIp string `json:"login_ip"`
-//   LastIp string `json:"last_ip"`
-//   // LoginTime int64 `xorm:"created"`
-// }
-
 type IdpAdmins struct {
   Id int64 `json:"id"`
   Phone string `json:"phone"`
-  Password string `json:"password" xorm:"-"`
+  Password string `json:"password"`
   Username string `json:"username"`
   Sex int64 `json:"sex"`
-  // Gid int64 `json:"gid"`
-  // Rid int64 `json:"rid"`
+  Gid string `json:"gid"`
+  Rid string `json:"rid"`
   Aid int64 `json:"aid"`
   Money int64 `json:"money" xorm:"default(0)"`
   State int64 `json:"state"`
@@ -43,6 +30,8 @@ type IdpAdmins struct {
   LastIp string `json:"last_ip"`
   EntryTime int64 `json:"entry_time"`
   QuitTime int64 `json:"quit_time"`
+  TrialTime int64 `json:"trial_time"`
+  ContractTime int64 `json:"contract_time"`
   DeletedAt int64 `json:"deleted_at" xorm:"deleted"`
   UpdatedAt int64 `json:"updated_at" xorm:"updated"`
   CreatedAt int64 `json:"created_at" xorm:"created"`
@@ -109,25 +98,29 @@ func Login(ctx context.Context) {
 
 // 用户详情
 func Detail (ctx context.Context) {
-  res := GetUserDetail(ctx.GetHeader("Authorization"), ctx)
+  author      := ctx.GetHeader("Authorization")
+  userinfo, _ := Auth.DecryptToken(author, "admin")
+  reqData     := userinfo.(map[string]interface{})
+
+  if len(reqData) <= 0 {
+    ctx.JSON(context.Map{})
+    return
+  }
+
+  id := int64(reqData["id"].(float64))
+
+  res := GetUserDetail(id, ctx)
+
   ctx.JSON(res)
 }
 
 // 获取用户信息方法
-func GetUserDetail(author string, ctx context.Context) context.Map {
-  userinfo, _ := Auth.DecryptToken(author, "admin")
-  reqData := userinfo.(map[string]interface{})
+func GetUserDetail(uid int64, ctx context.Context) context.Map {
 
-  if len(reqData) <= 0 {
-    return context.Map{}
-  }
+  var table IdpAdmins
+  table.Id = uid
 
-
-  var table UserDetailGroup
-
-  table.Id = int64(reqData["id"].(float64))
-
-  has, err := DB.Engine.Join("LEFT", "idp_admins_role", "idp_admins.rid = idp_admins_role.id").Join("LEFT", "idp_admins_group", "idp_admins_role.gid = idp_admins_group.id").Get(&table)
+  has, err := DB.Engine.Omit("password").Get(&table)
   if err != nil {
     return Utils.NewResData(1, err.Error(), ctx)
   }
@@ -142,9 +135,3 @@ func GetUserDetail(author string, ctx context.Context) context.Map {
   return data
 
 }
-
-// 更新用户登陆信息
-// func UpdataUserLoginInfo (table IdpAdmins) {
-//   _ = DB.Put(table.Id, &table)
-// }
-

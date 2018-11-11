@@ -3,6 +3,7 @@ package admin
 import (
   // "fmt"
   // "reflect"
+  // "encoding/json"
   "github.com/kataras/iris/context"
 
   // Auth "../../authorization"
@@ -22,12 +23,12 @@ type IdpAdminsRole struct {
   CreatedAt int64 `json:"created_at" xorm:"created"`
 }
 
-type GroupRoleGroup struct {
+type RoleAndGroup struct {
   IdpAdminsRole `xorm:"extends"`
   Group IdpAdminsGroup `json:"group" xorm:"extends"`
 }
 
-func (GroupRoleGroup) TableName() string {
+func (RoleAndGroup) TableName() string {
   return "idp_admins_role"
 }
 
@@ -35,10 +36,22 @@ func (GroupRoleGroup) TableName() string {
 // 用户组列表
 func RoleList (ctx context.Context) {
   // 获取分页、总数、limit
-  page, count, limit, _ := DB.Limit(ctx)
-  list := make([]GroupRoleGroup, 0)
+  page, count, limit, filters := DB.Limit(ctx)
+  list := make([]RoleAndGroup, 0)
 
-  // 连表查询，下面进行了2个连表
+  // 下面开始是查询条件 where
+  whereData  := ""
+  whereValue :=  []interface{}{}
+
+  group := filters["group"]
+
+  if !Utils.IsEmpty(group) {
+    whereData = DB.IsWhereEmpty(whereData, "idp_admins_role.gid in(" + Utils.ArrayInt64ToString(group) + ")")
+  }
+  // 查询条件结束
+
+
+  // 连表查询，下面进行了1个连表
   joinTable  := make(map[int]map[string]string)
   joinTable[0] = map[string]string {
     "type"  : "LEFT",
@@ -47,16 +60,16 @@ func RoleList (ctx context.Context) {
   }
 
   // 获取统计总数
-  var table GroupRoleGroup
+  var table RoleAndGroup
   data := context.Map{}
 
-  total, err := DB.Engine.Join(joinTable[0]["type"], joinTable[0]["table"], joinTable[0]["where"]).Count(&table)
+  total, err := DB.Engine.Join(joinTable[0]["type"], joinTable[0]["table"], joinTable[0]["where"]).Where(whereData, whereValue...).Count(&table)
 
   if err != nil {
     data = Utils.NewResData(1, err.Error(), ctx)
   } else {
     // 获取列表
-    err = DB.Engine.Desc("idp_admins_role.id").Join(joinTable[0]["type"], joinTable[0]["table"], joinTable[0]["where"]).Limit(count, limit).Find(&list)
+    err = DB.Engine.Desc("idp_admins_role.id").Join(joinTable[0]["type"], joinTable[0]["table"], joinTable[0]["where"]).Where(whereData, whereValue...).Limit(count, limit).Find(&list)
 
     // 返回数据
     if err != nil {
@@ -74,7 +87,7 @@ func RoleList (ctx context.Context) {
 // 详情
 func RoleDetail (ctx context.Context) {
 
-  var table GroupRoleGroup
+  var table RoleAndGroup
   ctx.ReadJSON(&table)
 
   id, _ := ctx.Params().GetInt64("id")

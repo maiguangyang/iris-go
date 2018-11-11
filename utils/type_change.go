@@ -1,7 +1,8 @@
 package utils
 
 import (
-  // "fmt"
+  "fmt"
+  "strings"
   "strconv"
 )
 
@@ -28,4 +29,9 @@ func IntToStr(v int) string {
 func Int64ToStr(v int64) string {
   s := strconv.FormatInt(v, 10)
   return s
+}
+
+// ArrayIntToString
+func ArrayInt64ToString(a interface{}) string {
+  return strings.Trim(strings.Replace(fmt.Sprint(a), " ", ",", -1), "[]")
 }

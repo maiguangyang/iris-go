@@ -22,15 +22,25 @@ type IdpAdminsGroup struct {
 }
 
 
+type roleList = IdpAdminsRole
+
+type GroupAndRole struct {
+  IdpAdminsGroup `xorm:"extends"`
+  Count int64 `json:"count"`
+}
+
+func (GroupAndRole) TableName() string {
+  return "idp_admins_group"
+}
+
 // 用户组列表
 func GroupList (ctx context.Context) {
   // 获取分页、总数、limit
   page, count, limit, _ := DB.Limit(ctx)
-  list := make([]IdpAdminsGroup, 0)
-
+  list := make([]GroupAndRole, 0)
 
   // 获取统计总数
-  var table IdpAdminsGroup
+  var table IdpAdminsRole
   data := context.Map{}
 
   total, err := DB.Engine.Count(&table)
@@ -39,7 +49,8 @@ func GroupList (ctx context.Context) {
     data = Utils.NewResData(1, err.Error(), ctx)
   } else {
     // 获取列表
-    err = DB.Engine.Desc("id").Limit(count, limit).Find(&list)
+    // err = DB.Engine.Desc("g.id").Sql("select g.*, r.* from idp_admins_group as g, idp_admins_role as r where r.gid = g.id").Limit(count, limit).Find(&list)
+    err = DB.Engine.Desc("g.id").Sql("select g.*, (select count(id) from idp_admins_role as r where r.gid = g.id) as count from idp_admins_group as g").Limit(count, limit).Find(&list)
 
     // 返回数据
     if err != nil {
