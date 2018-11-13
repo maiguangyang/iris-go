@@ -1,0 +1,79 @@
+package utils
+
+import(
+  // "fmt"
+  "reflect"
+  // "errors"
+)
+
+func SetField(obj interface{}, name string, value interface{}) error {
+  structValue := reflect.ValueOf(obj).Elem()
+  structFieldValue := structValue.FieldByName(name)
+
+
+  // if !structFieldValue.IsValid() {
+  //   return fmt.Errorf("No such field: %s in obj", name)
+  // }
+
+  // if !structFieldValue.CanSet() {
+  //   return fmt.Errorf("Cannot set %s field value", name)
+  // }
+  if structFieldValue.IsValid() && structFieldValue.CanSet() {
+    structFieldType := structFieldValue.Type()
+    val := reflect.ValueOf(value)
+
+    if structFieldType == val.Type() {
+      structFieldValue.Set(val)
+
+      // return errors.New("Provided value type didn't match obj field type")
+      return nil
+    }
+
+    return nil
+
+  }
+
+  return nil
+}
+
+func FillStruct(s interface{}, m map[string]interface{}) error {
+  for k, v := range m {
+    if reflect.TypeOf(v).String() == "float64" {
+      v = int64(v.(float64))
+    }
+
+    err := SetField(s, CamelString(k), v)
+    if err != nil {
+      return err
+    }
+  }
+  return nil
+}
+
+// 转驼峰命名
+func CamelString(s string) string {
+  data := make([]byte, 0, len(s))
+  j := false
+  k := false
+  num := len(s) - 1
+
+  for i := 0; i <= num; i++ {
+    d := s[i]
+    if k == false && d >= 'A' && d <= 'Z' {
+      k = true
+    }
+    if d >= 'a' && d <= 'z' && (j || k == false) {
+      d = d - 32
+      j = false
+      k = true
+    }
+
+    if k && d == '_' && num > i && s[i+1] >= 'a' && s[i+1] <= 'z' {
+      j = true
+      continue
+    }
+
+    data = append(data, d)
+  }
+  return string(data[:])
+}

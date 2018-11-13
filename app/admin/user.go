@@ -101,21 +101,11 @@ func sumbitUserData(tye int, ctx context.Context) context.Map {
     }
 
     reqData := decData.(map[string]interface{})
-
-    table.Id           = int64(reqData["id"].(float64))
-    table.Phone        = reqData["phone"].(string)
-    table.Password     = reqData["password"].(string)
-    table.Username     = reqData["username"].(string)
-    table.Sex          = int64(reqData["sex"].(float64))
-    table.Gid          = reqData["gid"].(string)
-    table.Rid          = reqData["rid"].(string)
-    table.Money        = int64(reqData["money"].(float64))
-    table.EntryTime    = int64(reqData["entry_time"].(float64))
-    table.JobState     = int64(reqData["job_state"].(float64))
-    table.TrialTime    = int64(reqData["trial_time"].(float64))
-    table.ContractTime = int64(reqData["contract_time"].(float64))
-    table.QuitTime     = int64(reqData["quit_time"].(float64))
-    table.State        = int64(reqData["state"].(float64))
+    // map 映射 struct
+    err = Utils.FillStruct(&table, reqData)
+    if err != nil {
+      return Utils.NewResData(1, err.Error(), ctx)
+    }
 
   } else {
     ctx.ReadJSON(&table)
@@ -172,7 +162,7 @@ func sumbitUserData(tye int, ctx context.Context) context.Map {
   }
 
   if err != nil {
-    return Utils.NewResData(1, tipsText + "失败", ctx)
+    return Utils.NewResData(1, err.Error(), ctx)
   }
 
   if tye == 0 {

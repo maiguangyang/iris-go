@@ -119,9 +119,11 @@ func sumbitGroupData(tye int, ctx context.Context) context.Map {
 
     reqData := decData.(map[string]interface{})
 
-    table.Id    = int64(reqData["id"].(float64))
-    table.Name  = reqData["name"].(string)
-    table.State = int64(reqData["state"].(float64))
+    // map 映射 struct
+    err = Utils.FillStruct(&table, reqData)
+    if err != nil {
+      return Utils.NewResData(1, err.Error(), ctx)
+    }
 
   } else {
     ctx.ReadJSON(&table)
@@ -166,7 +168,7 @@ func sumbitGroupData(tye int, ctx context.Context) context.Map {
   }
 
   if err != nil {
-    return Utils.NewResData(1, tipsText + "失败", ctx)
+    return Utils.NewResData(1, err.Error(), ctx)
   }
 
   return Utils.NewResData(0, tipsText + "成功", ctx)

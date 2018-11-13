@@ -55,8 +55,29 @@ func Login(ctx context.Context) {
 
   var table IdpAdmins
 
-  // 接收前端传值
-  ctx.ReadJSON(&table)
+  // 线上环境
+  if Public.NODE_ENV {
+    // 解密
+    decData, err := Public.DecryptReqData(ctx)
+
+    if err != nil {
+      ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
+      return
+    }
+    reqData := decData.(map[string]interface{})
+
+    // map 映射 struct
+    err = Utils.FillStruct(&table, reqData)
+
+    if err != nil {
+      ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
+      return
+    }
+
+  } else {
+    ctx.ReadJSON(&table)
+  }
+
   table.Password = Public.EncryptPassword(table.Password)
 
   has, err := DB.Engine.Get(&table)

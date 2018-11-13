@@ -108,6 +108,7 @@ func Init() {
     admin.Get("/user", Admin.UserList)              // 员工列表
     admin.Get("/user/{id:int64}", Admin.UserDetail) // 员工详情
     admin.Post("/user", Admin.UserAdd)              // 添加员工
+    admin.Put("/user", Admin.UserPut)               // 修改角色
     admin.Delete("/user", Admin.UserDel)            // 删除员工
 
 

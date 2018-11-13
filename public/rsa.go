@@ -2,6 +2,7 @@ package public
 
 import (
   // "fmt"
+  "net/url"
   "crypto/rsa"
   "crypto/rand"
   "crypto/x509"
@@ -86,6 +87,7 @@ func Decrypt(text, prvPemEnc string) ([]byte, error) {
   if textLen % limitLen != 0 {
     return ciphertext, errors.New("加密数据非法")
   }
+
   for i, j := 0, limitLen; i < textLen; i, j = i + limitLen, j + limitLen {
     decode, err := base64.StdEncoding.DecodeString(text[i:j])
     if err != nil {
@@ -103,6 +105,7 @@ func Decrypt(text, prvPemEnc string) ([]byte, error) {
     buffer.Write(c)
     ciphertext = buffer.Bytes()
   }
+
   return ciphertext, nil
 }
 
@@ -113,7 +116,11 @@ func DecryptJson(text, pubPemEnc string) (map[string]interface{}, error) {
     return map[string]interface{}{}, err
   }
   var cData map[string]interface{}
-  err = json.Unmarshal(b, &cData)
+
+  decodeurl,err := url.QueryUnescape(string(b))
+
+  err = json.Unmarshal([]byte(decodeurl), &cData)
+
   return cData, err
 }
 
@@ -132,17 +139,20 @@ func Encrypt(text, pubPemEnc string) (string, error) {
 
   // 最后解密对称加密的内容
   pubPem, err = AesDecrypt(dexDecode, []byte(aesKey))
+
   if err != nil {
     return encrypted, err
   }
 
   // 公私钥加密
   block, _ := pem.Decode(pubPem)
+
   if block == nil {
     return encrypted, errors.New("failed to parse PEM block containing the public key")
   }
 
   pub, err := x509.ParsePKIXPublicKey(block.Bytes)
+
   if err != nil {
     return encrypted, err
   }

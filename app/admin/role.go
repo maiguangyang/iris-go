@@ -139,10 +139,11 @@ func sumbitRoleData(tye int, ctx context.Context) context.Map {
 
     reqData := decData.(map[string]interface{})
 
-    table.Id    = int64(reqData["id"].(float64))
-    table.Name  = reqData["name"].(string)
-    table.Gid   = int64(reqData["gid"].(float64))
-    table.State = int64(reqData["state"].(float64))
+    // map 映射 struct
+    err = Utils.FillStruct(&table, reqData)
+    if err != nil {
+      return Utils.NewResData(1, err.Error(), ctx)
+    }
 
   } else {
     ctx.ReadJSON(&table)
@@ -189,8 +190,9 @@ func sumbitRoleData(tye int, ctx context.Context) context.Map {
     _, err = DB.Engine.Insert(&table)
   }
 
+
   if err != nil {
-    return Utils.NewResData(1, tipsText + "失败", ctx)
+    return Utils.NewResData(1, err.Error(), ctx)
   }
 
   return Utils.NewResData(0, tipsText + "成功", ctx)
@@ -210,7 +212,12 @@ func RoleDel (ctx context.Context) {
     }
 
     reqData  := decData.(map[string]interface{})
-    table.Id = int64(reqData["id"].(float64))
+    // map 映射 struct
+    err = Utils.FillStruct(&table, reqData)
+    if err != nil {
+      ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
+      return
+    }
 
   } else {
     ctx.ReadJSON(&table)
