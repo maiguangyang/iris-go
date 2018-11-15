@@ -5,7 +5,7 @@ import (
   // "reflect"
   "github.com/kataras/iris/context"
 
-  // Auth "../../authorization"
+  Auth "../../authorization"
   Public "../../public"
   Utils "../../utils"
   DB "../../database"
@@ -90,6 +90,7 @@ func UserPut (ctx context.Context) {
 func sumbitUserData(tye int, ctx context.Context) context.Map {
   var table IdpAdmins
 
+
   // 根据不同环境返回数据
   err := Utils.ResNodeEnvData(&table, ctx)
   if err != nil {
@@ -102,9 +103,6 @@ func sumbitUserData(tye int, ctx context.Context) context.Map {
     "Phone": {
       "required": true, "rgx": "phone",
     },
-    "Password": {
-      "required": true, "rgx": "password",
-    },
     "Username": {
       "required": true,
     },
@@ -113,16 +111,50 @@ func sumbitUserData(tye int, ctx context.Context) context.Map {
     },
   }
 
+  // 新增的时候，必须验证密码
+  if !Utils.IsEmpty(table.Password) {
+    rules["Password"] = map[string]interface{}{
+      "required": true, "rgx": "password",
+    }
+  }
+
+  // 验证参数
   errMsgs := rules.Validate(Utils.StructToMap(table))
   if errMsgs != nil {
     return Utils.NewResData(1, errMsgs, ctx)
   }
 
 
+  // 获取服务端用户信息
+  author      := ctx.GetHeader("Authorization")
+  userinfo, _ := Auth.DecryptToken(author, "admin")
+  reqData     := userinfo.(map[string]interface{})
+
+  if len(reqData) <= 0 {
+    return Utils.NewResData(1, "获取服务端用户信息失败", ctx)
+  }
+
+  id := int64(reqData["id"].(float64))
+  res := GetUserDetail(id, ctx)
+  userData := res["data"].(IdpAdmins)
+  // 获取服务端用户信息 END
+
+
+  // 看看是否修改密码
+  var isUser IdpAdmins
+  has, err := DB.Engine.Cols("password").Where("id=?", userData.Id).Get(&isUser)
+
+  if Utils.IsEmpty(table.Password) {
+    table.Password = isUser.Password
+  } else {
+    table.Password = Public.EncryptPassword(table.Password)
+  }
+
+
   // 判断数据库里面是否已经存在
   var exist IdpAdmins
-  value := []interface{}{table.Id, table.Phone}
-  has, err := DB.Engine.Where("id<>? and phone=?", value...).Exist(&exist)
+  value := []interface{}{userData.Id, userData.Phone}
+  has, err = DB.Engine.Where("id<>? and phone=?", value...).Exist(&exist)
 
   if err != nil {
     return Utils.NewResData(1, err.Error(), ctx)
@@ -132,7 +164,6 @@ func sumbitUserData(tye int, ctx context.Context) context.Map {
     return Utils.NewResData(1, table.Phone + "已存在", ctx)
   }
 
-  table.Password = Public.EncryptPassword(table.Password)
 
   // 写入数据库
   tipsText := "添加"
@@ -145,10 +176,12 @@ func sumbitUserData(tye int, ctx context.Context) context.Map {
     _, err = DB.Engine.Insert(&table)
   }
 
+
   if err != nil {
     return Utils.NewResData(1, err.Error(), ctx)
   }
 
+  // 新增返回并
   if tye == 0 {
     return Utils.NewResData(0, context.Map{
       "uid": table.Id,
