@@ -127,29 +127,14 @@ func RolePut (ctx context.Context) {
 func sumbitRoleData(tye int, ctx context.Context) context.Map {
   var table IdpAdminsRole
 
-  var rules Utils.Rules
-
-  // 线上环境
-  if Public.NODE_ENV {
-    decData, err := Public.DecryptReqData(ctx)
-
-    if err != nil {
-      return Utils.NewResData(1, err.Error(), ctx)
-    }
-
-    reqData := decData.(map[string]interface{})
-
-    // map 映射 struct
-    err = Utils.FillStruct(&table, reqData)
-    if err != nil {
-      return Utils.NewResData(1, err.Error(), ctx)
-    }
-
-  } else {
-    ctx.ReadJSON(&table)
+  // 根据不同环境返回数据
+  err := Utils.ResNodeEnvData(&table, ctx)
+  if err != nil {
+    return Utils.NewResData(1, err.Error(), ctx)
   }
 
   // 验证参数
+  var rules Utils.Rules
   rules = Utils.Rules{
     "Name": {
       "required": true,

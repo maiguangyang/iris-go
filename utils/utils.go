@@ -3,7 +3,9 @@ package utils
 import(
   // "fmt"
   "reflect"
+  "github.com/kataras/iris/context"
   // "errors"
+  Public "../public"
 )
 
 func SetField(obj interface{}, name string, value interface{}) error {
@@ -36,6 +38,7 @@ func SetField(obj interface{}, name string, value interface{}) error {
   return nil
 }
 
+// map 映射 struct
 func FillStruct(s interface{}, m map[string]interface{}) error {
   for k, v := range m {
     if reflect.TypeOf(v).String() == "float64" {
@@ -77,3 +80,32 @@ func CamelString(s string) string {
   }
   return string(data[:])
 }
+
+
+// 返回环境数据
+func ResNodeEnvData(table interface{}, ctx context.Context) error {
+  // 线上环境
+  if Public.NODE_ENV {
+    decData, err := Public.DecryptReqData(ctx)
+
+    if err != nil {
+      return err
+    }
+
+    reqData := decData.(map[string]interface{})
+
+    // map 映射 struct
+    err = FillStruct(table, reqData)
+    if err != nil {
+      return err
+    }
+
+    return nil
+
+  }
+  ctx.ReadJSON(table)
+  return nil
+}
+
+
+
