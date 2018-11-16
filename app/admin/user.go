@@ -35,6 +35,8 @@ func UserList (ctx context.Context) {
   state      := filters["state"]
   gid        := filters["gid"]
   rid        := filters["rid"]
+  job_state  := filters["job_state"]
+  sex        := filters["sex"]
 
   if !Utils.IsEmpty(start_time) && !Utils.IsEmpty(end_time) {
     whereData = DB.IsWhereEmpty(whereData, `idp_admins.entry_time >= ? and idp_admins.entry_time <= ?`)
@@ -65,6 +67,17 @@ func UserList (ctx context.Context) {
     whereData = DB.IsWhereEmpty(whereData, `idp_admins.rid like ?`)
     whereValue = append(whereValue, `%` + Utils.Float64ToStr(rid.(float64)) + `%`)
   }
+
+  if !Utils.IsEmpty(job_state) {
+    whereData = DB.IsWhereEmpty(whereData, `idp_admins.job_state = ?`)
+    whereValue = append(whereValue, job_state)
+  }
+
+  if !Utils.IsEmpty(sex) {
+    whereData = DB.IsWhereEmpty(whereData, `idp_admins.sex = ?`)
+    whereValue = append(whereValue, sex)
+  }
+
 
   // 查询条件结束
 
