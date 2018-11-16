@@ -10,6 +10,7 @@ const (
   IDP_AUTH = `CREATE TABLE idp_auth (
     id INT(11) NOT NULL AUTO_INCREMENT COMMENT 'id',
     content TEXT(10000) NOT NULL COMMENT 'json格式配置文件',
+    router TEXT(10000) NOT NULL COMMENT '前端路由权限配置文件',
     updated_at INT(11) NULL DEFAULT NULL COMMENT '修改时间',
     created_at INT(11) NULL DEFAULT NULL COMMENT '创建时间',
     PRIMARY KEY (id)

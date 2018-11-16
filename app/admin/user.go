@@ -1,7 +1,7 @@
 package admin
 
 import (
-  // "fmt"
+  "fmt"
   // "reflect"
   "github.com/kataras/iris/context"
 
@@ -17,6 +17,12 @@ func UserList (ctx context.Context) {
   page, count, limit, filters := DB.Limit(ctx)
   list := make([]IdpAdmins, 0)
 
+  allTable, _ := DB.Engine.DBMetas()
+
+  for _,v := range allTable{
+    fmt.Println(v.Name)
+    // tabMap[v.Name] = v.ColumnsSeq()
+  }
 
   // 下面开始是查询条件 where
   whereData  := ""
@@ -24,18 +30,42 @@ func UserList (ctx context.Context) {
 
   start_time := filters["start_time"]
   end_time   := filters["end_time"]
+  username   := filters["username"]
   phone      := filters["phone"]
+  state      := filters["state"]
+  gid        := filters["gid"]
+  rid        := filters["rid"]
 
   if !Utils.IsEmpty(start_time) && !Utils.IsEmpty(end_time) {
     whereData = DB.IsWhereEmpty(whereData, `idp_admins.entry_time >= ? and idp_admins.entry_time <= ?`)
     whereValue = append(whereValue, start_time, end_time)
   }
 
+  if !Utils.IsEmpty(username) {
+    whereData = DB.IsWhereEmpty(whereData, `idp_admins.username like ?`)
+    whereValue = append(whereValue, `%` + username.(string) + `%`)
+  }
 
   if !Utils.IsEmpty(phone) {
     whereData = DB.IsWhereEmpty(whereData, `idp_admins.phone = ?`)
     whereValue = append(whereValue, phone)
   }
+
+  if !Utils.IsEmpty(state) {
+    whereData = DB.IsWhereEmpty(whereData, `idp_admins.state = ?`)
+    whereValue = append(whereValue, state)
+  }
+
+  if !Utils.IsEmpty(gid) {
+    whereData = DB.IsWhereEmpty(whereData, `idp_admins.gid like ?`)
+    whereValue = append(whereValue, `%` + Utils.Float64ToStr(gid.(float64)) + `%`)
+  }
+
+  if !Utils.IsEmpty(rid) {
+    whereData = DB.IsWhereEmpty(whereData, `idp_admins.rid like ?`)
+    whereValue = append(whereValue, `%` + Utils.Float64ToStr(rid.(float64)) + `%`)
+  }
+
   // 查询条件结束
 
   // 获取统计总数
@@ -47,7 +77,9 @@ func UserList (ctx context.Context) {
     data = Utils.NewResData(1, err.Error(), ctx)
   } else {
     // 获取列表
-    err = DB.Engine.Omit("password").Desc("id").Where(whereData, whereValue...).Limit(count, limit).Find(&list)
+    err = DB.Engine.Omit("password").Desc("idp_admins.id").Where(whereData, whereValue...).Limit(count, limit).Find(&list)
+    // // err = DB.Engine.Sql("SELECT GROUP_CONCAT(cast(`name` as char(10)) SEPARATOR ',') as `group` from idp_admins_group where idp_admins_group.id = idp_admins.id ").Where(whereData, whereValue...).Limit(count, limit).Find(&list)
+    // err = DB.Engine.Omit("password").Sql("select idp_admins.*, (SELECT GROUP_CONCAT(cast(`name` as char(10)) SEPARATOR ',') from idp_admins_group where FIND_IN_SET(id, idp_admins.gid)) as `group` from idp_admins").Limit(count, limit).Find(&list)
 
     // 返回数据
     if err != nil {

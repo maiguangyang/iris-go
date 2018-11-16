@@ -1,4 +1,32 @@
 {
   "JdAdmins": [1, 2, 3, 4],
+  "1": {
+
+    "table": ["JdAdmins"],
+    "router": ["admin"]
+  },
+
+  "1": {
+    "add": ["JdAdmins", "test"],
+    "edit": ["JdAdmins", "test"],
+    "info": ["JdAdmins", "test"],
+    "del": ["JdAdmins", "test"],
+    "router": ["admin"]
+  },
+
+  "JdAdmins": {
+    "add"  : [1, 2, 3, 4, 6],
+    "edit" : [1, 2, 3, 4, 6],
+    "info" : [1, 2, 3, 4, 6],
+    "del"  : [1, 2, 3, 4, 6],
+  },
+
+  "routerName": {
+    "add"  : [1, 2, 3, 4, 6],
+    "edit" : [1, 2, 3, 4, 6],
+    "info" : [1, 2, 3, 4, 6],
+    "del"  : [1, 2, 3, 4, 6],
+  },
+
 }
 

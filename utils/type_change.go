@@ -35,3 +35,9 @@ func Int64ToStr(v int64) string {
 func ArrayInt64ToString(a interface{}) string {
   return strings.Trim(strings.Replace(fmt.Sprint(a), " ", ",", -1), "[]")
 }
+
+
+// float64转String
+func Float64ToStr(fv float64) string {
+  return strconv.FormatFloat(fv, 'f', 0, 64)
+}
