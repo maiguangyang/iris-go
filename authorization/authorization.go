@@ -6,6 +6,7 @@ package authorization
 import (
   // "fmt"
   "time"
+  "errors"
   "github.com/kataras/iris/context"
   jwt "github.com/dgrijalva/jwt-go"
 
@@ -111,3 +112,22 @@ func Verify(authHeader, role string, ctx context.Context) {
 
   ctx.Next()
 }
+
+
+// 获取用户JWT信息
+func HandleUserJWTToken(ctx context.Context, tye string) (map[string]interface{}, error) {
+  // 获取服务端用户信息
+  author      := ctx.GetHeader("Authorization")
+  userinfo, _ := DecryptToken(author, tye)
+  reqData     := userinfo.(map[string]interface{})
+
+  if len(reqData) <= 0 {
+    return nil, errors.New("user data is empty")
+  }
+
+  if tye == "admin" && reqData["gid"] == "1" {
+    reqData["gid"] = ""
+  }
+  return reqData, nil
+}
+

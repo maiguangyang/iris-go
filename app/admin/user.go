@@ -1,7 +1,7 @@
 package admin
 
 import (
-  "fmt"
+  // "fmt"
   // "reflect"
   "github.com/kataras/iris/context"
 
@@ -11,18 +11,18 @@ import (
   DB "../../database"
 )
 
-// 用户组列表
+// 列表
 func UserList (ctx context.Context) {
+  // 判断权限
+  hasAuth, err := DB.CheckAdminAuth(ctx, "idp_admins")
+  if hasAuth != true {
+    ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
+    return
+  }
+
   // 获取分页、总数、limit
   page, count, limit, filters := DB.Limit(ctx)
   list := make([]IdpAdmins, 0)
-
-  allTable, _ := DB.Engine.DBMetas()
-
-  for _,v := range allTable{
-    fmt.Println(v.Name)
-    // tabMap[v.Name] = v.ColumnsSeq()
-  }
 
   // 下面开始是查询条件 where
   whereData  := ""
@@ -78,7 +78,16 @@ func UserList (ctx context.Context) {
     whereValue = append(whereValue, sex)
   }
 
-
+  // 获取服务端用户信息
+  reqData, err := Auth.HandleUserJWTToken(ctx, "admin")
+  if err != nil {
+    ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
+    return
+  }
+  if !Utils.IsEmpty(reqData["gid"]) {
+    whereData = DB.IsWhereEmpty(whereData, "idp_admins.gid =?")
+    whereValue = append(whereValue, reqData["gid"])
+  }
   // 查询条件结束
 
   // 获取统计总数
@@ -109,6 +118,13 @@ func UserList (ctx context.Context) {
 
 // 用户详情
 func UserDetail(ctx context.Context) {
+  // 判断权限
+  hasAuth, err := DB.CheckAdminAuth(ctx, "idp_admins")
+  if hasAuth != true {
+    ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
+    return
+  }
+
   uid, err := ctx.Params().GetInt64("id")
   if err != nil {
     ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
@@ -133,11 +149,17 @@ func UserPut (ctx context.Context) {
 
 // 提交数据 0新增、1修改
 func sumbitUserData(tye int, ctx context.Context) context.Map {
+  // 判断权限
+  hasAuth, err := DB.CheckAdminAuth(ctx, "idp_admins")
+  if hasAuth != true {
+    return Utils.NewResData(1, err.Error(), ctx)
+  }
+
   var table IdpAdmins
 
 
   // 根据不同环境返回数据
-  err := Utils.ResNodeEnvData(&table, ctx)
+  err = Utils.ResNodeEnvData(&table, ctx)
   if err != nil {
     return Utils.NewResData(1, err.Error(), ctx)
   }
@@ -236,25 +258,22 @@ func sumbitUserData(tye int, ctx context.Context) context.Map {
   return Utils.NewResData(0, tipsText + "成功", ctx)
 }
 
-
 // 删除
 func UserDel (ctx context.Context) {
+  // 判断权限
+  hasAuth, err := DB.CheckAdminAuth(ctx, "idp_admins")
+  if hasAuth != true {
+    ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
+    return
+  }
+
   var table IdpAdmins
 
-  // 线上环境
-  if Public.NODE_ENV {
-    decData, err := Public.DecryptReqData(ctx)
-
-    if err != nil {
-      ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
-      return
-    }
-
-    reqData  := decData.(map[string]interface{})
-    table.Id = int64(reqData["id"].(float64))
-
-  } else {
-    ctx.ReadJSON(&table)
+  // 根据不同环境返回数据
+  err = Utils.ResNodeEnvData(&table, ctx)
+  if err != nil {
+    ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
+    return
   }
 
   // 判断数据库里面是否已经存在

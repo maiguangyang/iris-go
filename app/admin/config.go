@@ -1,41 +1,40 @@
 package admin
 
-import (
-  // "fmt"
-  // "reflect"
+import(
   "github.com/kataras/iris/context"
-
-  Auth "../../authorization"
-  Utils "../../utils"
+  // Public "../../public"
   DB "../../database"
+  Utils "../../utils"
 )
 
-type IdpAdminsGroup struct {
+type IdpAuthSet struct {
   Id int64 `json:"id"`
   Name string `json:"name"`
-  Aid int64 `json:"aid"`
-  State int64 `json:"state"`
-  DeletedAt int64 `json:"deleted_at" xorm:"deleted"`
+  TableName string `json:"table_name"`
+  Routes string `json:"routes"`
+  Path string `json:"path"`
   UpdatedAt int64 `json:"updated_at" xorm:"updated"`
   CreatedAt int64 `json:"created_at" xorm:"created"`
 }
 
+// 获取数据库所有表
+func CongifTable(ctx context.Context) {
+  allTable, _ := DB.Engine.DBMetas()
 
-type roleList = IdpAdminsRole
+  array :=  []string{}
+  for _,v := range allTable{
+    array = append(array, v.Name)
+    // tabMap[v.Name] = v.ColumnsSeq()
+  }
 
-type GroupAndRole struct {
-  IdpAdminsGroup `xorm:"extends"`
-  // Count int64 `json:"count"`
-}
-
-func (GroupAndRole) TableName() string {
-  return "idp_admins_group"
+  data := Utils.NewResData(0, array, ctx)
+  ctx.JSON(data)
 }
 
 // 列表
-func GroupList (ctx context.Context) {
+func CongifRoutesList (ctx context.Context) {
   // 判断权限
-  hasAuth, err := DB.CheckAdminAuth(ctx, "idp_admins_group")
+  hasAuth, err := DB.CheckAdminAuth(ctx, "idp_auth_set")
   if hasAuth != true {
     ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
     return
@@ -43,37 +42,19 @@ func GroupList (ctx context.Context) {
 
   // 获取分页、总数、limit
   page, count, limit, _ := DB.Limit(ctx)
-  list := make([]GroupAndRole, 0)
-
-  // 下面开始是查询条件 where
-  whereData  := ""
-  whereValue :=  []interface{}{}
-
-  // 获取服务端用户信息
-  reqData, err := Auth.HandleUserJWTToken(ctx, "admin")
-  if err != nil {
-    ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
-    return
-  }
-  if !Utils.IsEmpty(reqData["gid"]) {
-    whereData = DB.IsWhereEmpty(whereData, "id =?")
-    whereValue = append(whereValue, reqData["gid"])
-  }
-  // 查询条件结束
+  list := make([]IdpAuthSet, 0)
 
   // 获取统计总数
-  var table IdpAdminsRole
+  var table IdpAuthSet
   data := context.Map{}
 
-  total, err := DB.Engine.Where(whereData, whereValue...).Count(&table)
+  total, err := DB.Engine.Count(&table)
 
   if err != nil {
     data = Utils.NewResData(1, err.Error(), ctx)
   } else {
     // 获取列表
-    // err = DB.Engine.Desc("g.id").Sql("select g.*, r.* from idp_admins_group as g, idp_admins_role as r where r.gid = g.id").Limit(count, limit).Find(&list)
-    // err = DB.Engine.Desc("g.id").Sql("select g.*, (select count(id) from idp_admins_role as r where r.gid = g.id) as count from idp_admins_group as g").Where(whereData, whereValue...).Limit(count, limit).Find(&list)
-    err = DB.Engine.Desc("id").Where(whereData, whereValue...).Limit(count, limit).Find(&list)
+    err = DB.Engine.Desc("id").Limit(count, limit).Find(&list)
 
     // 返回数据
     if err != nil {
@@ -89,21 +70,19 @@ func GroupList (ctx context.Context) {
 }
 
 // 详情
-func GroupDetail (ctx context.Context) {
+func CongifRoutesDetail (ctx context.Context) {
   // 判断权限
-  hasAuth, err := DB.CheckAdminAuth(ctx, "idp_admins_group")
+  hasAuth, err := DB.CheckAdminAuth(ctx, "idp_auth_set")
   if hasAuth != true {
     ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
     return
   }
 
-  var table IdpAdminsGroup
+  var table IdpAuthSet
   ctx.ReadJSON(&table)
 
   id, _ := ctx.Params().GetInt64("id")
   table.Id = id
-
-  data := context.Map{}
 
   has, err := DB.Engine.Get(&table)
   if err != nil {
@@ -111,6 +90,7 @@ func GroupDetail (ctx context.Context) {
     return
   }
 
+  data := context.Map{}
   if has == true {
     data = Utils.NewResData(0, table, ctx)
   } else {
@@ -122,26 +102,27 @@ func GroupDetail (ctx context.Context) {
 }
 
 // 新增
-func GroupAdd (ctx context.Context) {
-  data := sumbitGroupData(0, ctx)
+func CongifRoutesAdd (ctx context.Context) {
+  data := sumbitCongifRoutesData(0, ctx)
   ctx.JSON(data)
 }
 
 // 修改
-func GroupPut (ctx context.Context) {
-  data := sumbitGroupData(1, ctx)
+func CongifRoutesPut (ctx context.Context) {
+  data := sumbitCongifRoutesData(1, ctx)
   ctx.JSON(data)
 }
 
+
 // 提交数据 0新增、1修改
-func sumbitGroupData(tye int, ctx context.Context) context.Map {
+func sumbitCongifRoutesData(tye int, ctx context.Context) context.Map {
   // 判断权限
-  hasAuth, err := DB.CheckAdminAuth(ctx, "idp_admins_group")
+  hasAuth, err := DB.CheckAdminAuth(ctx, "idp_auth_set")
   if hasAuth != true {
     return Utils.NewResData(1, err.Error(), ctx)
   }
 
-  var table IdpAdminsGroup
+  var table IdpAuthSet
 
   // 根据不同环境返回数据
   err = Utils.ResNodeEnvData(&table, ctx)
@@ -154,7 +135,6 @@ func sumbitGroupData(tye int, ctx context.Context) context.Map {
   rules = Utils.Rules{
     "Name": {
       "required": true,
-      // "rgx": "identity",
     },
   }
 
@@ -165,9 +145,9 @@ func sumbitGroupData(tye int, ctx context.Context) context.Map {
   }
 
   // 判断数据库里面是否已经存在
-  var exist IdpAdminsGroup
-  value := []interface{}{table.Id, table.Name}
-  has, err := DB.Engine.Where("id<>? and name=?", value...).Exist(&exist)
+  var exist IdpAuthSet
+  value := []interface{}{table.Id, table.Name, table.TableName}
+  has, err := DB.Engine.Where("id<>? and name=? and table_name=?", value...).Exist(&exist)
 
   if err != nil {
     return Utils.NewResData(1, err.Error(), ctx)
@@ -188,6 +168,7 @@ func sumbitGroupData(tye int, ctx context.Context) context.Map {
     _, err = DB.Engine.Insert(&table)
   }
 
+
   if err != nil {
     return Utils.NewResData(1, err.Error(), ctx)
   }
@@ -196,15 +177,15 @@ func sumbitGroupData(tye int, ctx context.Context) context.Map {
 }
 
 // 删除
-func GroupDel (ctx context.Context) {
+func CongifRoutesDel (ctx context.Context) {
   // 判断权限
-  hasAuth, err := DB.CheckAdminAuth(ctx, "idp_admins_group")
+  hasAuth, err := DB.CheckAdminAuth(ctx, "idp_auth_set")
   if hasAuth != true {
     ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
     return
   }
 
-  var table IdpAdminsGroup
+  var table IdpAuthSet
 
   // 根据不同环境返回数据
   err = Utils.ResNodeEnvData(&table, ctx)
@@ -214,7 +195,7 @@ func GroupDel (ctx context.Context) {
   }
 
   // 判断数据库里面是否已经存在
-  var exist IdpAdminsGroup
+  var exist IdpAuthSet
   has, err := DB.Engine.Where("id=?", table.Id).Exist(&exist)
 
   if err != nil {
@@ -226,21 +207,6 @@ func GroupDel (ctx context.Context) {
     ctx.JSON(Utils.NewResData(1, "该信息不存在", ctx))
     return
   }
-
-  // 判断角色管理表是否存在，如果存在的话，不予删除
-  var roleExist IdpAdminsRole
-  has, err = DB.Engine.Where("gid=?", table.Id).Exist(&roleExist)
-
-  if err != nil {
-    ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
-    return
-  }
-
-  if has == true {
-    ctx.JSON(Utils.NewResData(1, "无法删除，角色管理中使用了该值", ctx))
-    return
-  }
-
 
   // 开始删除
   _, err = DB.Engine.Id(table.Id).Delete(&table)
@@ -254,5 +220,3 @@ func GroupDel (ctx context.Context) {
 
   ctx.JSON(data)
 }
-
-

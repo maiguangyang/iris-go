@@ -88,6 +88,7 @@ func Init() {
   app.Put("/admin/login", Admin.Login)      // 登陆
   admin := app.Party("/admin", Auth.CheckAuthAdmin)
   {
+
     admin.Get("/detail", Admin.Detail)                // 账户详情
 
     // group
@@ -108,9 +109,23 @@ func Init() {
     admin.Get("/user", Admin.UserList)              // 员工列表
     admin.Get("/user/{id:int64}", Admin.UserDetail) // 员工详情
     admin.Post("/user", Admin.UserAdd)              // 添加员工
-    admin.Put("/user", Admin.UserPut)               // 修改角色
+    admin.Put("/user", Admin.UserPut)               // 修改员工
     admin.Delete("/user", Admin.UserDel)            // 删除员工
 
+    // set auth
+    admin.Get("/config/table", Admin.CongifTable)                    // 获取数据库表
+    admin.Get("/config/routes", Admin.CongifRoutesList)              // 权限路由列表
+    admin.Get("/config/routes/{id:int64}", Admin.CongifRoutesDetail) // 权限路由详情
+    admin.Post("/config/routes", Admin.CongifRoutesAdd)              // 添加权限路由
+    admin.Put("/config/routes", Admin.CongifRoutesPut)               // 修改权限路由
+    admin.Delete("/config/routes", Admin.CongifRoutesDel)            // 删除权限路由
+
+    // 角色权限设置
+    admin.Get("/roleAuth", Admin.AdminAuthList)              // 权限路由列表
+    admin.Get("/roleAuth/{id:int64}", Admin.AdminAuthDetail) // 权限路由详情
+    admin.Post("/roleAuth", Admin.AdminAuthAdd)              // 添加权限路由
+    admin.Put("/roleAuth", Admin.AdminAuthPut)               // 修改权限路由
+    admin.Delete("/roleAuth", Admin.AdminAuthDel)            // 删除权限路由
 
     // sys.Post("/test/sqlopen", AppSyßs.TestOpen)        // 测试数据库连接
     // sys.Get("/database", AppSys.GetDatabase)          // 获取数据库库列表

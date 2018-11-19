@@ -56,28 +56,13 @@ func Login(ctx context.Context) {
 
   var table IdpAdmins
 
-  // 线上环境
-  if Public.NODE_ENV {
-    // 解密
-    decData, err := Public.DecryptReqData(ctx)
-
-    if err != nil {
-      ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
-      return
-    }
-    reqData := decData.(map[string]interface{})
-
-    // map 映射 struct
-    err = Utils.FillStruct(&table, reqData)
-
-    if err != nil {
-      ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
-      return
-    }
-
-  } else {
-    ctx.ReadJSON(&table)
+  // 根据不同环境返回数据
+  err := Utils.ResNodeEnvData(&table, ctx)
+  if err != nil {
+    ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
+    return
   }
+
 
   table.Password = Public.EncryptPassword(table.Password)
 
@@ -88,28 +73,33 @@ func Login(ctx context.Context) {
   if err != nil {
     data = Utils.NewResData(1, err.Error(), ctx)
   } else if has == true {
-    // 返回前端的Token
-    ip := ctx.RemoteAddr()
+    if table.State == 2 {
+      data = Utils.NewResData(1, "您的账户已被禁用", ctx)
+    } else {
+      // 返回前端的Token
+      ip := ctx.RemoteAddr()
+      token := Auth.SetToken(context.Map{
+        "id": table.Id,
+        "gid": table.Gid,
+        "rid": table.Rid,
+      }, Public.EncryptMd5(ip + Auth.SecretKey["admin"].(string)), "admin")
 
-    token := Auth.SetToken(context.Map{
-      "id": table.Id,
-    }, Public.EncryptMd5(ip + Auth.SecretKey["admin"].(string)), "admin")
+      table.LastTime = table.LoginTime
+      table.LastTime = table.LoginTime
+      table.LastIp   = table.LoginIp
+      table.LoginIp  = ip
 
-    table.LastTime = table.LoginTime
-    table.LastTime = table.LoginTime
-    table.LastIp   = table.LoginIp
-    table.LoginIp  = ip
+      // 更新用户登陆信息
+      // UpdataUserLoginInfo(table)
 
-    // 更新用户登陆信息
-    // UpdataUserLoginInfo(table)
+      _, err := DB.Engine.Id(table.Id).Update(&table)
+      if err != nil {
+        ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
+        return
+      }
 
-    _, err := DB.Engine.Id(table.Id).Update(&table)
-    if err != nil {
-      ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
-      return
+      data = Utils.NewResData(0, token, ctx)
     }
-
-    data = Utils.NewResData(0, token, ctx)
   } else {
     data = Utils.NewResData(1, "请检查账号密码输入是否正确", ctx)
   }

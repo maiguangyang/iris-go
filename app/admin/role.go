@@ -6,8 +6,8 @@ import (
   // "encoding/json"
   "github.com/kataras/iris/context"
 
-  // Auth "../../authorization"
-  Public "../../public"
+  Auth "../../authorization"
+  // Public "../../public"
   Utils "../../utils"
   DB "../../database"
 )
@@ -26,6 +26,7 @@ type IdpAdminsRole struct {
 type RoleAndGroup struct {
   IdpAdminsRole `xorm:"extends"`
   Group IdpAdminsGroup `json:"group" xorm:"extends"`
+  Auth IdpAdminAuth `json:"auth" xorm:"extends"`
 }
 
 func (RoleAndGroup) TableName() string {
@@ -33,8 +34,15 @@ func (RoleAndGroup) TableName() string {
 }
 
 
-// 用户组列表
+// 角色列表
 func RoleList (ctx context.Context) {
+  // 判断权限
+  hasAuth, err := DB.CheckAdminAuth(ctx, "idp_admins_role")
+  if hasAuth != true {
+    ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
+    return
+  }
+
   // 获取分页、总数、limit
   page, count, limit, filters := DB.Limit(ctx)
   list := make([]RoleAndGroup, 0)
@@ -47,6 +55,17 @@ func RoleList (ctx context.Context) {
 
   if !Utils.IsEmpty(group) {
     whereData = DB.IsWhereEmpty(whereData, "idp_admins_role.gid in(" + Utils.ArrayInt64ToString(group) + ")")
+  }
+
+  // 获取服务端用户信息
+  reqData, err := Auth.HandleUserJWTToken(ctx, "admin")
+  if err != nil {
+    ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
+    return
+  }
+  if !Utils.IsEmpty(reqData["gid"]) {
+    whereData = DB.IsWhereEmpty(whereData, "idp_admins_role.gid =?")
+    whereValue = append(whereValue, reqData["gid"])
   }
   // 查询条件结束
 
@@ -86,6 +105,12 @@ func RoleList (ctx context.Context) {
 
 // 详情
 func RoleDetail (ctx context.Context) {
+  // 判断权限
+  hasAuth, err := DB.CheckAdminAuth(ctx, "idp_admins_role")
+  if hasAuth != true {
+    ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
+    return
+  }
 
   var table RoleAndGroup
   ctx.ReadJSON(&table)
@@ -93,7 +118,7 @@ func RoleDetail (ctx context.Context) {
   id, _ := ctx.Params().GetInt64("id")
   table.Id = id
 
-  has, err := DB.Engine.Join("LEFT", "idp_admins_group", "idp_admins_role.gid = idp_admins_group.id").Get(&table)
+  has, err := DB.Engine.Join("LEFT", "idp_admins_group", "idp_admins_role.gid = idp_admins_group.id").Join("LEFT", "idp_admin_auth", "idp_admin_auth.rid = idp_admins_role.id").Get(&table)
   if err != nil {
     ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
     return
@@ -125,10 +150,16 @@ func RolePut (ctx context.Context) {
 
 // 提交数据 0新增、1修改
 func sumbitRoleData(tye int, ctx context.Context) context.Map {
+  // 判断权限
+  hasAuth, err := DB.CheckAdminAuth(ctx, "idp_admins_role")
+  if hasAuth != true {
+    return Utils.NewResData(1, err.Error(), ctx)
+  }
+
   var table IdpAdminsRole
 
   // 根据不同环境返回数据
-  err := Utils.ResNodeEnvData(&table, ctx)
+  err = Utils.ResNodeEnvData(&table, ctx)
   if err != nil {
     return Utils.NewResData(1, err.Error(), ctx)
   }
@@ -180,32 +211,32 @@ func sumbitRoleData(tye int, ctx context.Context) context.Map {
     return Utils.NewResData(1, err.Error(), ctx)
   }
 
+  // 新增返回并
+  if tye == 0 {
+    return Utils.NewResData(0, context.Map{
+      "rid": table.Id,
+    }, ctx)
+  }
+
   return Utils.NewResData(0, tipsText + "成功", ctx)
 }
 
 // 删除
 func RoleDel (ctx context.Context) {
+  // 判断权限
+  hasAuth, err := DB.CheckAdminAuth(ctx, "idp_admins_role")
+  if hasAuth != true {
+    ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
+    return
+  }
+
   var table IdpAdminsRole
 
-  // 线上环境
-  if Public.NODE_ENV {
-    decData, err := Public.DecryptReqData(ctx)
-
-    if err != nil {
-      ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
-      return
-    }
-
-    reqData  := decData.(map[string]interface{})
-    // map 映射 struct
-    err = Utils.FillStruct(&table, reqData)
-    if err != nil {
-      ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
-      return
-    }
-
-  } else {
-    ctx.ReadJSON(&table)
+  // 根据不同环境返回数据
+  err = Utils.ResNodeEnvData(&table, ctx)
+  if err != nil {
+    ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
+    return
   }
 
   // 判断数据库里面是否已经存在
