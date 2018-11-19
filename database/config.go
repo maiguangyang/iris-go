@@ -19,7 +19,7 @@ var Engine *xorm.Engine
 
 // 连接
 func OpenSql() error {
-  dataSourceName := "root:123456@tcp(192.168.31.235:3306)/idongpin?charset=utf8mb4"
+  dataSourceName := "root:123456@tcp(192.168.1.235:3306)/idongpin?charset=utf8mb4"
 
   var err error
 
@@ -235,50 +235,65 @@ func AuthData(ctx context.Context, str interface{}, rid string) (interface{}, er
 
     arr := dat["add"].([]interface{})
     if len(arr) > 0 {
-      for _, item := range strings.Split(arr[0].(string), ","){
-        index := Utils.IndexOf(array["POST"], item)
-        if index == -1 {
-          array["POST"] = append(array["POST"], item)
+      for _, item := range arr{
+        split := strings.Split(item.(string), ",")
+        for _, child := range split{
+          index := Utils.IndexOf(array["POST"], child)
+          if index == -1 {
+            array["POST"] = append(array["POST"], child)
+          }
         }
       }
     }
 
     arr = dat["edit"].([]interface{})
     if len(arr) > 0 {
-      for _, item := range strings.Split(arr[0].(string), ","){
-        index := Utils.IndexOf(array["PUT"], item)
-        if index == -1 {
-          array["PUT"] = append(array["PUT"], item)
+      for _, item := range arr{
+        split := strings.Split(item.(string), ",")
+        for _, child := range split{
+          index := Utils.IndexOf(array["PUT"], child)
+          if index == -1 {
+            array["PUT"] = append(array["PUT"], child)
+          }
         }
       }
     }
 
     arr = dat["info"].([]interface{})
     if len(arr) > 0 {
-      for _, item := range strings.Split(arr[0].(string), ","){
-        index := Utils.IndexOf(array["INFO"], item)
-        if index == -1 {
-          array["INFO"] = append(array["INFO"], item)
+      for _, item := range arr{
+        split := strings.Split(item.(string), ",")
+        for _, child := range split{
+          index := Utils.IndexOf(array["INFO"], child)
+          if index == -1 {
+            array["INFO"] = append(array["INFO"], child)
+          }
         }
       }
     }
 
     arr = dat["list"].([]interface{})
     if len(arr) > 0 {
-      for _, item := range strings.Split(arr[0].(string), ","){
-        index := Utils.IndexOf(array["GET"], item)
-        if index == -1 {
-          array["GET"] = append(array["GET"], item)
+      for _, item := range arr{
+        split := strings.Split(item.(string), ",")
+        for _, child := range split{
+          index := Utils.IndexOf(array["GET"], child)
+          if index == -1 {
+            array["GET"] = append(array["GET"], child)
+          }
         }
       }
     }
 
     arr = dat["del"].([]interface{})
     if len(arr) > 0 {
-      for _, item := range strings.Split(arr[0].(string), ","){
-        index := Utils.IndexOf(array["DELETE"], item)
-        if index == -1 {
-          array["DELETE"] = append(array["DELETE"], item)
+      for _, item := range arr{
+        split := strings.Split(item.(string), ",")
+        for _, child := range split{
+          index := Utils.IndexOf(array["DELETE"], child)
+          if index == -1 {
+            array["DELETE"] = append(array["DELETE"], child)
+          }
         }
       }
     }
