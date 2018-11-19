@@ -4,6 +4,7 @@ import (
   "fmt"
   // "reflect"
   // "database/sql"
+  "strings"
   "errors"
   "encoding/json"
   "github.com/kataras/iris/context"
@@ -208,6 +209,86 @@ func CheckAdminAuth(ctx context.Context, table string) (bool, error) {
   return has, err
 }
 
+// 返回用户的权限
+func AuthData(ctx context.Context, str interface{}, rid string) (interface{}, error) {
+  err := Engine.Desc("id").Where("rid in(" + rid + ")").Limit(10000, 0).Find(str)
+  if err != nil {
+    return nil, err
+  }
+
+  data,_ := json.Marshal(str)
+  var array = map[string][]interface{}{}
+
+  array["GET"]    = []interface{}{}
+  array["INFO"]   = []interface{}{}
+  array["POST"]   = []interface{}{}
+  array["PUT"]    = []interface{}{}
+  array["DELETE"] = []interface{}{}
+
+  var list []map[string]interface{}
+  _ = json.Unmarshal([]byte(string(data)), &list)
+
+  var dat map[string]interface{}
+  for _, v := range list{
+    content := v["content"].(string)
+    _ = json.Unmarshal([]byte(content), &dat)
+
+    arr := dat["add"].([]interface{})
+    if len(arr) > 0 {
+      for _, item := range strings.Split(arr[0].(string), ","){
+        index := Utils.IndexOf(array["POST"], item)
+        if index == -1 {
+          array["POST"] = append(array["POST"], item)
+        }
+      }
+    }
+
+    arr = dat["edit"].([]interface{})
+    if len(arr) > 0 {
+      for _, item := range strings.Split(arr[0].(string), ","){
+        index := Utils.IndexOf(array["PUT"], item)
+        if index == -1 {
+          array["PUT"] = append(array["PUT"], item)
+        }
+      }
+    }
+
+    arr = dat["info"].([]interface{})
+    if len(arr) > 0 {
+      for _, item := range strings.Split(arr[0].(string), ","){
+        index := Utils.IndexOf(array["INFO"], item)
+        if index == -1 {
+          array["INFO"] = append(array["INFO"], item)
+        }
+      }
+    }
+
+    arr = dat["list"].([]interface{})
+    if len(arr) > 0 {
+      for _, item := range strings.Split(arr[0].(string), ","){
+        index := Utils.IndexOf(array["GET"], item)
+        if index == -1 {
+          array["GET"] = append(array["GET"], item)
+        }
+      }
+    }
+
+    arr = dat["del"].([]interface{})
+    if len(arr) > 0 {
+      for _, item := range strings.Split(arr[0].(string), ","){
+        index := Utils.IndexOf(array["DELETE"], item)
+        if index == -1 {
+          array["DELETE"] = append(array["DELETE"], item)
+        }
+      }
+    }
+
+  }
+
+  return array, nil
+}
+
+
 // 返回权限
 func checkAuthValue(ctx context.Context, data map[string][]interface{}, table string) (bool, error) {
   method := ctx.Method()
@@ -220,9 +301,9 @@ func checkAuthValue(ctx context.Context, data map[string][]interface{}, table st
     if err == nil {
       index = Utils.IndexOf(data["INFO"], table)
     } else {
+      // arr := strings.Split(data["GET"]), ",")
       index = Utils.IndexOf(data["GET"], table)
     }
-
 
   }
   if method == "POST" {
@@ -244,80 +325,6 @@ func checkAuthValue(ctx context.Context, data map[string][]interface{}, table st
   return true, nil
 }
 
-// 返回用户的权限
-func AuthData(ctx context.Context, str interface{}, rid string) (interface{}, error) {
-  err := Engine.Desc("id").Where("rid in(" + rid + ")").Limit(10000, 0).Find(str)
-  if err != nil {
-    return nil, err
-  }
-
-  data,_ := json.Marshal(str)
-
-  var array = map[string][]interface{}{}
-
-  array["GET"]    = []interface{}{}
-  array["INFO"]   = []interface{}{}
-  array["POST"]   = []interface{}{}
-  array["PUT"]    = []interface{}{}
-  array["DELETE"] = []interface{}{}
-
-  var list []map[string]interface{}
-  _ = json.Unmarshal([]byte(string(data)), &list)
-
-  var dat map[string]interface{}
-  for _, v := range list{
-    content := v["content"].(string)
-    _ = json.Unmarshal([]byte(content), &dat)
-
-    if len(dat["add"].([]interface{})) > 0 {
-      for _, item := range dat["add"].([]interface{}){
-        index := Utils.IndexOf(array["POST"], item)
-        if index == -1 {
-          array["POST"] = append(array["POST"], item)
-        }
-      }
-    }
-
-    if len(dat["edit"].([]interface{})) > 0 {
-      for _, item := range dat["edit"].([]interface{}){
-        index := Utils.IndexOf(array["PUT"], item)
-        if index == -1 {
-          array["PUT"] = append(array["PUT"], item)
-        }
-      }
-    }
-
-    if len(dat["info"].([]interface{})) > 0 {
-      for _, item := range dat["info"].([]interface{}){
-        index := Utils.IndexOf(array["INFO"], item)
-        if index == -1 {
-          array["INFO"] = append(array["INFO"], item)
-        }
-      }
-    }
-
-    if len(dat["list"].([]interface{})) > 0 {
-      for _, item := range dat["list"].([]interface{}){
-        index := Utils.IndexOf(array["GET"], item)
-        if index == -1 {
-          array["GET"] = append(array["GET"], item)
-        }
-      }
-    }
-
-    if len(dat["del"].([]interface{})) > 0 {
-      for _, item := range dat["del"].([]interface{}){
-        index := Utils.IndexOf(array["DELETE"], item)
-        if index == -1 {
-          array["DELETE"] = append(array["DELETE"], item)
-        }
-      }
-    }
-
-  }
-
-  return array, nil
-}
 
 // 返回分页、总数、limit
 func Limit(ctx context.Context) (int64, int, int, map[string]interface{}) {

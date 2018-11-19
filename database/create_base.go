@@ -22,7 +22,7 @@ const (
   IDP_AUTH_SET = `CREATE TABLE idp_auth_set (
     id INT(11) NOT NULL AUTO_INCREMENT COMMENT 'id',
     name VARCHAR(255) NULL DEFAULT '' COMMENT '权限名称',
-    table_name VARCHAR(255) NULL DEFAULT '' COMMENT '数据表',
+    table_name VARCHAR(1000) NULL DEFAULT '' COMMENT '数据表',
     routes TEXT(60000) NOT NULL COMMENT '前端路由权限',
     path VARCHAR(255) NULL DEFAULT '' COMMENT '前端路由路径',
     updated_at INT(11) NULL DEFAULT NULL COMMENT '修改时间',
