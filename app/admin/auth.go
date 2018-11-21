@@ -6,7 +6,7 @@ import(
   // "encoding/json"
   "github.com/kataras/iris/context"
   // Public "../../public"
-  // Auth "../../authorization"
+  Auth "../../authorization"
   DB "../../database"
   Utils "../../utils"
 )
@@ -119,6 +119,16 @@ func sumbitAdminAuthData(tye int, ctx context.Context) context.Map {
   err = Utils.ResNodeEnvData(&table, ctx)
   if err != nil {
     return Utils.NewResData(1, err.Error(), ctx)
+  }
+
+  // 不能修改自己所在组的权限
+  reqData, err := Auth.HandleUserJWTToken(ctx, "admin")
+  if err != nil {
+    return Utils.NewResData(1, err.Error(), ctx)
+  }
+
+  if Utils.StrToInt64(reqData["rid"].(string)) == table.Rid {
+    return Utils.NewResData(1, "登陆账户属于该角色，无法修改权限", ctx)
   }
 
   // 判断数据库里面是否已经存在

@@ -101,7 +101,6 @@ func RoleList (ctx context.Context) {
       data = Utils.NewResData(0, resData, ctx)
     }
   }
-
   ctx.JSON(data)
 
 }

@@ -14,6 +14,7 @@ type IdpAuthSet struct {
   TableName string `json:"table_name"`
   Routes string `json:"routes"`
   SubId string `json:"sub_id"`
+  SubName string `json:"sub_name"`
   UpdatedAt int64 `json:"updated_at" xorm:"updated"`
   CreatedAt int64 `json:"created_at" xorm:"created"`
 }
@@ -55,7 +56,8 @@ func AuthSetList (ctx context.Context) {
     data = Utils.NewResData(1, err.Error(), ctx)
   } else {
     // 获取列表
-    err = DB.Engine.Desc("id").Limit(count, limit).Find(&list)
+    // err = DB.Engine.Desc("id").Limit(count, limit).Find(&list)
+    err = DB.Engine.Sql("SELECT s.*, (SELECT GROUP_CONCAT(cast(`name` as char(10)) SEPARATOR ',') FROM idp_auth_set where FIND_IN_SET(id, s.sub_id)) as sub_name from idp_auth_set as s").Limit(count, limit).Find(&list)
 
     // 返回数据
     if err != nil {

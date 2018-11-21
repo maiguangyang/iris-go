@@ -211,6 +211,7 @@ func CheckAdminAuth(ctx context.Context, table string) (bool, bool, error) {
 // 返回用户的权限
 func AuthData(ctx context.Context, str interface{}, rid, table string) (bool, bool, error) {
   err := Engine.Desc("id").Where("rid in(" + rid + ")").Limit(10000, 0).Find(str)
+
   if err != nil {
     return false, false, err
   }
@@ -219,16 +220,23 @@ func AuthData(ctx context.Context, str interface{}, rid, table string) (bool, bo
 
   method := ctx.Method()
   methodType := map[string]string {
-    "GET"    : "list",
+    "GET"    : "info",
     "POST"   : "add",
     "PUT"    : "edit",
     "DELETE" : "del",
   }
-  _, err = ctx.Params().GetInt64("id")
+
+  id, err := ctx.Params().GetInt64("id")
+
   // 如果是详情
-  if err == nil {
-    methodType["GET"] = "info"
+  if id == -1 {
+    methodType["GET"] = "list"
+    err = errors.New("操作权限不足")
   }
+
+  // if err == nil {
+  //   methodType["GET"] = "info"
+  // }
 
   var list []map[string]interface{}
   _ = json.Unmarshal([]byte(string(data)), &list)
