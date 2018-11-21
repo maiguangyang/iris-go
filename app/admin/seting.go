@@ -1,6 +1,7 @@
 package admin
 
 import(
+  // "fmt"
   "github.com/kataras/iris/context"
   // Public "../../public"
   DB "../../database"
@@ -109,10 +110,20 @@ func AuthSetAdd (ctx context.Context) {
 
 // 修改
 func AuthSetPut (ctx context.Context) {
+
+
   data := sumbitAuthSetData(1, ctx)
   ctx.JSON(data)
 }
 
+type company struct {
+  IdpAuthSet `xorm:"extends"`
+  Last_table string `json:"last_table"`
+}
+
+func (company) TableName() string {
+  return "idp_auth_set"
+}
 
 // 提交数据 0新增、1修改
 func sumbitAuthSetData(tye int, ctx context.Context) context.Map {
@@ -122,7 +133,7 @@ func sumbitAuthSetData(tye int, ctx context.Context) context.Map {
     return Utils.NewResData(1, err.Error(), ctx)
   }
 
-  var table IdpAuthSet
+  var table company
 
   // 根据不同环境返回数据
   err = Utils.ResNodeEnvData(&table, ctx)
@@ -139,22 +150,23 @@ func sumbitAuthSetData(tye int, ctx context.Context) context.Map {
   }
 
 
-  errMsgs := rules.Validate(Utils.StructToMap(table))
+  errMsgs := rules.Validate(Utils.StructToMap(table.IdpAuthSet))
   if errMsgs != nil {
     return Utils.NewResData(1, errMsgs, ctx)
   }
 
+
   // 判断数据库里面是否已经存在
   var exist IdpAuthSet
-  value := []interface{}{table.Id, table.Name, table.TableName}
-  has, err := DB.Engine.Where("id<>? and name=? and table_name=?", value...).Exist(&exist)
+  value := []interface{}{table.IdpAuthSet.Id, table.IdpAuthSet.Name, table.IdpAuthSet.TableName}
+  has, err := DB.Engine.Omit("last_table").Where("id<>? and name=? and table_name=?", value...).Exist(&exist)
 
   if err != nil {
     return Utils.NewResData(1, err.Error(), ctx)
   }
 
   if has == true {
-    return Utils.NewResData(1, table.Name + "已存在", ctx)
+    return Utils.NewResData(1, table.IdpAuthSet.Name + "已存在", ctx)
   }
 
   // 写入数据库
@@ -162,11 +174,21 @@ func sumbitAuthSetData(tye int, ctx context.Context) context.Map {
   if tye == 1 {
     tipsText = "修改"
     // 修改
-    _, err = DB.Engine.Id(table.Id).Update(&table)
+    _, err = DB.Engine.Omit("last_table").Id(table.IdpAuthSet.Id).Update(&table)
+
+    if err == nil {
+      ss, err := DB.Engine.Query("SELECT GROUP_CONCAT(cast(`id` as char(10)) SEPARATOR ',') as id  FROM idp_admin_auth WHERE find_in_set(?,sid)", table.IdpAuthSet.Id)
+      if err == nil {
+        aid := string(ss[0]["id"])
+        sql := "update idp_admin_auth set content=replace(content, ?, ?) where id in(?)"
+        _, err = DB.Engine.Exec(sql, table.Last_table, table.IdpAuthSet.TableName, aid)
+      }
+    }
   } else {
     // 新增
-    _, err = DB.Engine.Insert(&table)
+    _, err = DB.Engine.Omit("last_table").Insert(&table)
   }
+
 
 
   if err != nil {
