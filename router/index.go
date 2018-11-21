@@ -113,12 +113,12 @@ func Init() {
     admin.Delete("/user", Admin.UserDel)            // 删除员工
 
     // set auth
-    admin.Get("/config/table", Admin.CongifTable)                    // 获取数据库表
-    admin.Get("/config/routes", Admin.CongifRoutesList)              // 权限路由列表
-    admin.Get("/config/routes/{id:int64}", Admin.CongifRoutesDetail) // 权限路由详情
-    admin.Post("/config/routes", Admin.CongifRoutesAdd)              // 添加权限路由
-    admin.Put("/config/routes", Admin.CongifRoutesPut)               // 修改权限路由
-    admin.Delete("/config/routes", Admin.CongifRoutesDel)            // 删除权限路由
+    admin.Get("/auth/table", Admin.AuthSetTable)              // 获取数据库表
+    admin.Get("/auth/seting", Admin.AuthSetList)              // 权限路由列表
+    admin.Get("/auth/seting/{id:int64}", Admin.AuthSetDetail) // 权限路由详情
+    admin.Post("/auth/seting", Admin.AuthSetAdd)              // 添加权限路由
+    admin.Put("/auth/seting", Admin.AuthSetPut)               // 修改权限路由
+    admin.Delete("/auth/seting", Admin.AuthSetDel)            // 删除权限路由
 
     // 角色权限设置
     admin.Get("/roleAuth", Admin.AdminAuthList)              // 权限路由列表

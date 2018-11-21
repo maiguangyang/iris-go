@@ -12,13 +12,13 @@ type IdpAuthSet struct {
   Name string `json:"name"`
   TableName string `json:"table_name"`
   Routes string `json:"routes"`
-  Path string `json:"path"`
+  SubId string `json:"sub_id"`
   UpdatedAt int64 `json:"updated_at" xorm:"updated"`
   CreatedAt int64 `json:"created_at" xorm:"created"`
 }
 
 // 获取数据库所有表
-func CongifTable(ctx context.Context) {
+func AuthSetTable(ctx context.Context) {
   allTable, _ := DB.Engine.DBMetas()
 
   array :=  []string{}
@@ -32,9 +32,9 @@ func CongifTable(ctx context.Context) {
 }
 
 // 列表
-func CongifRoutesList (ctx context.Context) {
+func AuthSetList (ctx context.Context) {
   // 判断权限
-  hasAuth, err := DB.CheckAdminAuth(ctx, "idp_auth_set")
+  hasAuth, _, err := DB.CheckAdminAuth(ctx, "idp_auth_set")
   if hasAuth != true {
     ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
     return
@@ -70,9 +70,9 @@ func CongifRoutesList (ctx context.Context) {
 }
 
 // 详情
-func CongifRoutesDetail (ctx context.Context) {
+func AuthSetDetail (ctx context.Context) {
   // 判断权限
-  hasAuth, err := DB.CheckAdminAuth(ctx, "idp_auth_set")
+  hasAuth, _, err := DB.CheckAdminAuth(ctx, "idp_auth_set")
   if hasAuth != true {
     ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
     return
@@ -102,22 +102,22 @@ func CongifRoutesDetail (ctx context.Context) {
 }
 
 // 新增
-func CongifRoutesAdd (ctx context.Context) {
-  data := sumbitCongifRoutesData(0, ctx)
+func AuthSetAdd (ctx context.Context) {
+  data := sumbitAuthSetData(0, ctx)
   ctx.JSON(data)
 }
 
 // 修改
-func CongifRoutesPut (ctx context.Context) {
-  data := sumbitCongifRoutesData(1, ctx)
+func AuthSetPut (ctx context.Context) {
+  data := sumbitAuthSetData(1, ctx)
   ctx.JSON(data)
 }
 
 
 // 提交数据 0新增、1修改
-func sumbitCongifRoutesData(tye int, ctx context.Context) context.Map {
+func sumbitAuthSetData(tye int, ctx context.Context) context.Map {
   // 判断权限
-  hasAuth, err := DB.CheckAdminAuth(ctx, "idp_auth_set")
+  hasAuth, _, err := DB.CheckAdminAuth(ctx, "idp_auth_set")
   if hasAuth != true {
     return Utils.NewResData(1, err.Error(), ctx)
   }
@@ -177,9 +177,9 @@ func sumbitCongifRoutesData(tye int, ctx context.Context) context.Map {
 }
 
 // 删除
-func CongifRoutesDel (ctx context.Context) {
+func AuthSetDel (ctx context.Context) {
   // 判断权限
-  hasAuth, err := DB.CheckAdminAuth(ctx, "idp_auth_set")
+  hasAuth, _, err := DB.CheckAdminAuth(ctx, "idp_auth_set")
   if hasAuth != true {
     ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
     return

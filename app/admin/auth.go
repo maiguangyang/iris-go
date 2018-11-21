@@ -16,6 +16,7 @@ type IdpAdminAuth struct {
   Rid int64 `json:"rid"`
   Sid string `json:"sid"`
   Content string `json:"content"`
+  Auth int64 `json:"auth" xorm:"default(2)"`
   UpdatedAt int64 `json:"updated_at" xorm:"updated"`
   CreatedAt int64 `json:"created_at" xorm:"created"`
 }
@@ -24,7 +25,7 @@ type IdpAdminAuth struct {
 func AdminAuthList (ctx context.Context) {
 
   // 判断权限
-  hasAuth, err := DB.CheckAdminAuth(ctx, "idp_admin_auth")
+  hasAuth, _, err := DB.CheckAdminAuth(ctx, "idp_admin_auth")
   if hasAuth != true {
     ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
     return
@@ -62,7 +63,7 @@ func AdminAuthList (ctx context.Context) {
 // 详情
 func AdminAuthDetail (ctx context.Context) {
   // 判断权限
-  hasAuth, err := DB.CheckAdminAuth(ctx, "idp_admin_auth")
+  hasAuth, _, err := DB.CheckAdminAuth(ctx, "idp_admin_auth")
   if hasAuth != true {
     ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
     return
@@ -107,7 +108,7 @@ func AdminAuthPut (ctx context.Context) {
 // 提交数据 0新增、1修改
 func sumbitAdminAuthData(tye int, ctx context.Context) context.Map {
   // 判断权限
-  hasAuth, err := DB.CheckAdminAuth(ctx, "idp_admin_auth")
+  hasAuth, _, err := DB.CheckAdminAuth(ctx, "idp_admin_auth")
   if hasAuth != true {
     return Utils.NewResData(1, err.Error(), ctx)
   }
@@ -152,7 +153,7 @@ func sumbitAdminAuthData(tye int, ctx context.Context) context.Map {
 // 删除
 func AdminAuthDel (ctx context.Context) {
   // 判断权限
-  hasAuth, err := DB.CheckAdminAuth(ctx, "idp_admin_auth")
+  hasAuth, _, err := DB.CheckAdminAuth(ctx, "idp_admin_auth")
   if hasAuth != true {
     ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
     return

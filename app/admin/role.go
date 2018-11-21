@@ -37,7 +37,7 @@ func (RoleAndGroup) TableName() string {
 // 角色列表
 func RoleList (ctx context.Context) {
   // 判断权限
-  hasAuth, err := DB.CheckAdminAuth(ctx, "idp_admins_role")
+  hasAuth, stride, err := DB.CheckAdminAuth(ctx, "idp_admins_role")
   if hasAuth != true {
     ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
     return
@@ -57,15 +57,18 @@ func RoleList (ctx context.Context) {
     whereData = DB.IsWhereEmpty(whereData, "idp_admins_role.gid in(" + Utils.ArrayInt64ToString(group) + ")")
   }
 
-  // 获取服务端用户信息
-  reqData, err := Auth.HandleUserJWTToken(ctx, "admin")
-  if err != nil {
-    ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
-    return
-  }
-  if !Utils.IsEmpty(reqData["gid"]) {
-    whereData = DB.IsWhereEmpty(whereData, "idp_admins_role.gid =?")
-    whereValue = append(whereValue, reqData["gid"])
+  // 是否跨部门
+  if stride != true {
+    // 获取服务端用户信息
+    reqData, err := Auth.HandleUserJWTToken(ctx, "admin")
+    if err != nil {
+      ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
+      return
+    }
+    if !Utils.IsEmpty(reqData["gid"]) {
+      whereData = DB.IsWhereEmpty(whereData, "idp_admins_role.gid =?")
+      whereValue = append(whereValue, reqData["gid"])
+    }
   }
   // 查询条件结束
 
@@ -106,7 +109,7 @@ func RoleList (ctx context.Context) {
 // 详情
 func RoleDetail (ctx context.Context) {
   // 判断权限
-  hasAuth, err := DB.CheckAdminAuth(ctx, "idp_admins_role")
+  hasAuth, _, err := DB.CheckAdminAuth(ctx, "idp_admins_role")
   if hasAuth != true {
     ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
     return
@@ -151,7 +154,7 @@ func RolePut (ctx context.Context) {
 // 提交数据 0新增、1修改
 func sumbitRoleData(tye int, ctx context.Context) context.Map {
   // 判断权限
-  hasAuth, err := DB.CheckAdminAuth(ctx, "idp_admins_role")
+  hasAuth, _, err := DB.CheckAdminAuth(ctx, "idp_admins_role")
   if hasAuth != true {
     return Utils.NewResData(1, err.Error(), ctx)
   }
@@ -224,7 +227,7 @@ func sumbitRoleData(tye int, ctx context.Context) context.Map {
 // 删除
 func RoleDel (ctx context.Context) {
   // 判断权限
-  hasAuth, err := DB.CheckAdminAuth(ctx, "idp_admins_role")
+  hasAuth, _, err := DB.CheckAdminAuth(ctx, "idp_admins_role")
   if hasAuth != true {
     ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
     return

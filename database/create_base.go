@@ -13,6 +13,7 @@ const (
     rid INT(11) NULL DEFAULT NUll COMMENT '角色id',
     sid VARCHAR(1000) NULL DEFAULT null COMMENT '权限表对应id',
     content TEXT(60000) NOT NULL COMMENT 'json格式配置文件',
+    auth INT(2) NULL DEFAULT 2 COMMENT '跨部门查看：1/是，2/否',
     updated_at INT(11) NULL DEFAULT NULL COMMENT '修改时间',
     created_at INT(11) NULL DEFAULT NULL COMMENT '创建时间',
     PRIMARY KEY (id)
@@ -24,7 +25,7 @@ const (
     name VARCHAR(255) NULL DEFAULT '' COMMENT '权限名称',
     table_name VARCHAR(1000) NULL DEFAULT '' COMMENT '数据表',
     routes TEXT(60000) NOT NULL COMMENT '前端路由权限',
-    path VARCHAR(255) NULL DEFAULT '' COMMENT '前端路由路径',
+    sub_id VARCHAR(255) NULL DEFAULT '' COMMENT '附属权限arrar',
     updated_at INT(11) NULL DEFAULT NULL COMMENT '修改时间',
     created_at INT(11) NULL DEFAULT NULL COMMENT '创建时间',
     PRIMARY KEY (id)

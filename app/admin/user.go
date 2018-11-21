@@ -14,7 +14,7 @@ import (
 // 列表
 func UserList (ctx context.Context) {
   // 判断权限
-  hasAuth, err := DB.CheckAdminAuth(ctx, "idp_admins")
+  hasAuth, stride, err := DB.CheckAdminAuth(ctx, "idp_admins")
   if hasAuth != true {
     ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
     return
@@ -78,15 +78,18 @@ func UserList (ctx context.Context) {
     whereValue = append(whereValue, sex)
   }
 
-  // 获取服务端用户信息
-  reqData, err := Auth.HandleUserJWTToken(ctx, "admin")
-  if err != nil {
-    ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
-    return
-  }
-  if !Utils.IsEmpty(reqData["gid"]) {
-    whereData = DB.IsWhereEmpty(whereData, "idp_admins.gid =?")
-    whereValue = append(whereValue, reqData["gid"])
+  // 是否跨部门
+  if stride != true {
+    // 获取服务端用户信息
+    reqData, err := Auth.HandleUserJWTToken(ctx, "admin")
+    if err != nil {
+      ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
+      return
+    }
+    if !Utils.IsEmpty(reqData["gid"]) {
+      whereData = DB.IsWhereEmpty(whereData, "idp_admins.gid =?")
+      whereValue = append(whereValue, reqData["gid"])
+    }
   }
   // 查询条件结束
 
@@ -119,7 +122,7 @@ func UserList (ctx context.Context) {
 // 用户详情
 func UserDetail(ctx context.Context) {
   // 判断权限
-  hasAuth, err := DB.CheckAdminAuth(ctx, "idp_admins")
+  hasAuth, _, err := DB.CheckAdminAuth(ctx, "idp_admins")
   if hasAuth != true {
     ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
     return
@@ -150,7 +153,7 @@ func UserPut (ctx context.Context) {
 // 提交数据 0新增、1修改
 func sumbitUserData(tye int, ctx context.Context) context.Map {
   // 判断权限
-  hasAuth, err := DB.CheckAdminAuth(ctx, "idp_admins")
+  hasAuth, _, err := DB.CheckAdminAuth(ctx, "idp_admins")
   if hasAuth != true {
     return Utils.NewResData(1, err.Error(), ctx)
   }
@@ -261,7 +264,7 @@ func sumbitUserData(tye int, ctx context.Context) context.Map {
 // 删除
 func UserDel (ctx context.Context) {
   // 判断权限
-  hasAuth, err := DB.CheckAdminAuth(ctx, "idp_admins")
+  hasAuth, _, err := DB.CheckAdminAuth(ctx, "idp_admins")
   if hasAuth != true {
     ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
     return

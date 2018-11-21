@@ -35,7 +35,7 @@ func (GroupAndRole) TableName() string {
 // 列表
 func GroupList (ctx context.Context) {
   // 判断权限
-  hasAuth, err := DB.CheckAdminAuth(ctx, "idp_admins_group")
+  hasAuth, stride, err := DB.CheckAdminAuth(ctx, "idp_admins_group")
   if hasAuth != true {
     ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
     return
@@ -49,15 +49,18 @@ func GroupList (ctx context.Context) {
   whereData  := ""
   whereValue :=  []interface{}{}
 
-  // 获取服务端用户信息
-  reqData, err := Auth.HandleUserJWTToken(ctx, "admin")
-  if err != nil {
-    ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
-    return
-  }
-  if !Utils.IsEmpty(reqData["gid"]) {
-    whereData = DB.IsWhereEmpty(whereData, "id =?")
-    whereValue = append(whereValue, reqData["gid"])
+  // 是否跨部门
+  if stride != true {
+    // 获取服务端用户信息
+    reqData, err := Auth.HandleUserJWTToken(ctx, "admin")
+    if err != nil {
+      ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
+      return
+    }
+    if !Utils.IsEmpty(reqData["gid"]) {
+      whereData = DB.IsWhereEmpty(whereData, "id =?")
+      whereValue = append(whereValue, reqData["gid"])
+    }
   }
   // 查询条件结束
 
@@ -91,7 +94,7 @@ func GroupList (ctx context.Context) {
 // 详情
 func GroupDetail (ctx context.Context) {
   // 判断权限
-  hasAuth, err := DB.CheckAdminAuth(ctx, "idp_admins_group")
+  hasAuth, _, err := DB.CheckAdminAuth(ctx, "idp_admins_group")
   if hasAuth != true {
     ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
     return
@@ -136,7 +139,7 @@ func GroupPut (ctx context.Context) {
 // 提交数据 0新增、1修改
 func sumbitGroupData(tye int, ctx context.Context) context.Map {
   // 判断权限
-  hasAuth, err := DB.CheckAdminAuth(ctx, "idp_admins_group")
+  hasAuth, _, err := DB.CheckAdminAuth(ctx, "idp_admins_group")
   if hasAuth != true {
     return Utils.NewResData(1, err.Error(), ctx)
   }
@@ -198,7 +201,7 @@ func sumbitGroupData(tye int, ctx context.Context) context.Map {
 // 删除
 func GroupDel (ctx context.Context) {
   // 判断权限
-  hasAuth, err := DB.CheckAdminAuth(ctx, "idp_admins_group")
+  hasAuth, _, err := DB.CheckAdminAuth(ctx, "idp_admins_group")
   if hasAuth != true {
     ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
     return

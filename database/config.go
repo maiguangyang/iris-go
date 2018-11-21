@@ -4,7 +4,7 @@ import (
   "fmt"
   // "reflect"
   // "database/sql"
-  "strings"
+  // "strings"
   "errors"
   "encoding/json"
   "github.com/kataras/iris/context"
@@ -133,6 +133,7 @@ func HasInitTable() {
     Rid int64
     Sid string
     Content string
+    Auth int64
     CreatedAt int64 `xorm:"created"`
   }
 
@@ -140,6 +141,7 @@ func HasInitTable() {
   auth.Rid = 1
   auth.Sid = "*"
   auth.Content = "*"
+  auth.Auth = 1
 
   has, _   = Engine.IsTableExist("idp_admin_auth")
   empty, _ = Engine.IsTableEmpty(&auth)
@@ -174,12 +176,13 @@ func Post(table interface{}) error {
 }
 
 
-func CheckAdminAuth(ctx context.Context, table string) (bool, error) {
+func CheckAdminAuth(ctx context.Context, table string) (bool, bool, error) {
   type IdpAdminAuth struct {
     Id int64 `json:"id"`
     Rid int64 `json:"rid"`
     Sid string `json:"sid"`
     Content string `json:"content"`
+    Auth int64 `json:"auth"`
     UpdatedAt int64 `json:"updated_at" xorm:"updated"`
     CreatedAt int64 `json:"created_at" xorm:"created"`
   }
@@ -187,120 +190,82 @@ func CheckAdminAuth(ctx context.Context, table string) (bool, error) {
   // 获取服务端用户信息
   reqData, err := Auth.HandleUserJWTToken(ctx, "admin")
   if err != nil {
-    return false, err
+    return false, false, err
   }
 
   rid := reqData["rid"].(string)
   if rid == "*" {
-    return true, nil
+    return true, true, nil
   }
 
   list := make([]IdpAdminAuth, 0)
-  resData, err := AuthData(ctx, &list, rid)
+  has, auth, err := AuthData(ctx, &list, rid, table)
 
   if err != nil {
-    return false, err
+    return false, false, err
   }
 
-  data := resData.(map[string][]interface{})
-
-  has, err := checkAuthValue(ctx, data, table)
-
-  return has, err
+  return has, auth, nil
 }
 
 // 返回用户的权限
-func AuthData(ctx context.Context, str interface{}, rid string) (interface{}, error) {
+func AuthData(ctx context.Context, str interface{}, rid, table string) (bool, bool, error) {
   err := Engine.Desc("id").Where("rid in(" + rid + ")").Limit(10000, 0).Find(str)
   if err != nil {
-    return nil, err
+    return false, false, err
   }
 
   data,_ := json.Marshal(str)
-  var array = map[string][]interface{}{}
 
-  array["GET"]    = []interface{}{}
-  array["INFO"]   = []interface{}{}
-  array["POST"]   = []interface{}{}
-  array["PUT"]    = []interface{}{}
-  array["DELETE"] = []interface{}{}
+  method := ctx.Method()
+  methodType := map[string]string {
+    "GET"    : "list",
+    "POST"   : "add",
+    "PUT"    : "edit",
+    "DELETE" : "del",
+  }
+  _, err = ctx.Params().GetInt64("id")
+  // 如果是详情
+  if err == nil {
+    methodType["GET"] = "info"
+  }
 
   var list []map[string]interface{}
   _ = json.Unmarshal([]byte(string(data)), &list)
 
-  var dat map[string]interface{}
-  for _, v := range list{
-    content := v["content"].(string)
-    _ = json.Unmarshal([]byte(content), &dat)
+  var has bool     = false
+  var hasAuth bool = false
 
-    arr := dat["add"].([]interface{})
-    if len(arr) > 0 {
-      for _, item := range arr{
-        split := strings.Split(item.(string), ",")
-        for _, child := range split{
-          index := Utils.IndexOf(array["POST"], child)
-          if index == -1 {
-            array["POST"] = append(array["POST"], child)
+  if len(list) > 0 {
+    var dat []map[string]interface{}
+    for _, v := range list{
+      content := v["content"].(string)
+      _ = json.Unmarshal([]byte(content), &dat)
+
+      if int64(v["auth"].(float64)) == 1 {
+        hasAuth = true
+      } else {
+        hasAuth = false
+      }
+
+      if len(dat) > 0 {
+        for _, v := range dat{
+          tye := v["type"].(map[string]interface{})
+          for k, _ := range tye{
+            if methodType[method] == k && v["name"].(string) == table {
+                return true, hasAuth, nil
+              } else {
+                has = false
+                err = errors.New("操作权限不足")
+              }
           }
+
         }
       }
     }
-
-    arr = dat["edit"].([]interface{})
-    if len(arr) > 0 {
-      for _, item := range arr{
-        split := strings.Split(item.(string), ",")
-        for _, child := range split{
-          index := Utils.IndexOf(array["PUT"], child)
-          if index == -1 {
-            array["PUT"] = append(array["PUT"], child)
-          }
-        }
-      }
-    }
-
-    arr = dat["info"].([]interface{})
-    if len(arr) > 0 {
-      for _, item := range arr{
-        split := strings.Split(item.(string), ",")
-        for _, child := range split{
-          index := Utils.IndexOf(array["INFO"], child)
-          if index == -1 {
-            array["INFO"] = append(array["INFO"], child)
-          }
-        }
-      }
-    }
-
-    arr = dat["list"].([]interface{})
-    if len(arr) > 0 {
-      for _, item := range arr{
-        split := strings.Split(item.(string), ",")
-        for _, child := range split{
-          index := Utils.IndexOf(array["GET"], child)
-          if index == -1 {
-            array["GET"] = append(array["GET"], child)
-          }
-        }
-      }
-    }
-
-    arr = dat["del"].([]interface{})
-    if len(arr) > 0 {
-      for _, item := range arr{
-        split := strings.Split(item.(string), ",")
-        for _, child := range split{
-          index := Utils.IndexOf(array["DELETE"], child)
-          if index == -1 {
-            array["DELETE"] = append(array["DELETE"], child)
-          }
-        }
-      }
-    }
-
   }
 
-  return array, nil
+  return has, hasAuth, err
 }
 
 
