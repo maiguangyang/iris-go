@@ -14,7 +14,7 @@ type IdpAuthSet struct {
   TableName string `json:"table_name"`
   Routes string `json:"routes"`
   SubId string `json:"sub_id"`
-  SubName string `json:"sub_name"`
+  SubName string `json:"sub_name" xorm:"<-"`
   UpdatedAt int64 `json:"updated_at" xorm:"updated"`
   CreatedAt int64 `json:"created_at" xorm:"created"`
 }
@@ -87,7 +87,7 @@ func AuthSetDetail (ctx context.Context) {
   id, _ := ctx.Params().GetInt64("id")
   table.Id = id
 
-  has, err := DB.Engine.Get(&table)
+  has, err := DB.Engine.Omit("sub_name").Get(&table)
   if err != nil {
     ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
     return
@@ -161,7 +161,7 @@ func sumbitAuthSetData(tye int, ctx context.Context) context.Map {
   // 判断数据库里面是否已经存在
   var exist IdpAuthSet
   value := []interface{}{table.IdpAuthSet.Id, table.IdpAuthSet.Name, table.IdpAuthSet.TableName}
-  has, err := DB.Engine.Omit("last_table").Where("id<>? and name=? and table_name=?", value...).Exist(&exist)
+  has, err := DB.Engine.Omit("last_table", "sub_name").Where("id<>? and name=? and table_name=?", value...).Exist(&exist)
 
   if err != nil {
     return Utils.NewResData(1, err.Error(), ctx)
@@ -176,7 +176,7 @@ func sumbitAuthSetData(tye int, ctx context.Context) context.Map {
   if tye == 1 {
     tipsText = "修改"
     // 修改
-    _, err = DB.Engine.Omit("last_table").Id(table.IdpAuthSet.Id).Update(&table)
+    _, err = DB.Engine.Omit("last_table", "sub_name").Id(table.IdpAuthSet.Id).Update(&table)
 
     if err == nil {
       ss, err := DB.Engine.Query("SELECT GROUP_CONCAT(cast(`id` as char(10)) SEPARATOR ',') as id  FROM idp_admin_auth WHERE find_in_set(?,sid)", table.IdpAuthSet.Id)
@@ -188,7 +188,7 @@ func sumbitAuthSetData(tye int, ctx context.Context) context.Map {
     }
   } else {
     // 新增
-    _, err = DB.Engine.Omit("last_table").Insert(&table)
+    _, err = DB.Engine.Omit("last_table", "sub_name").Insert(&table)
   }
 
 
