@@ -176,7 +176,7 @@ func Post(table interface{}) error {
 }
 
 
-func CheckAdminAuth(ctx context.Context, table string) (bool, bool, error) {
+func CheckAdminAuth(ctx context.Context, table string) (bool, bool, int, error) {
   type IdpAdminAuth struct {
     Id int64 `json:"id"`
     Rid int64 `json:"rid"`
@@ -190,22 +190,22 @@ func CheckAdminAuth(ctx context.Context, table string) (bool, bool, error) {
   // 获取服务端用户信息
   reqData, err := Auth.HandleUserJWTToken(ctx, "admin")
   if err != nil {
-    return false, false, err
+    return false, false, 407, err
   }
 
   rid := reqData["rid"].(string)
   if rid == "*" {
-    return true, true, nil
+    return true, true, 0, nil
   }
 
   list := make([]IdpAdminAuth, 0)
   has, auth, err := AuthData(ctx, &list, rid, table)
 
   if err != nil {
-    return false, false, err
+    return false, false, 407, err
   }
 
-  return has, auth, nil
+  return has, auth, 0, nil
 }
 
 // 返回用户的权限

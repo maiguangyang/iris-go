@@ -35,9 +35,9 @@ func (GroupAndRole) TableName() string {
 // 列表
 func GroupList (ctx context.Context) {
   // 判断权限
-  hasAuth, stride, err := DB.CheckAdminAuth(ctx, "idp_admins_group")
+  hasAuth, stride, code, err := DB.CheckAdminAuth(ctx, "idp_admins_group")
   if hasAuth != true {
-    ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
+    ctx.JSON(Utils.NewResData(code, err.Error(), ctx))
     return
   }
 
@@ -94,9 +94,9 @@ func GroupList (ctx context.Context) {
 // 详情
 func GroupDetail (ctx context.Context) {
   // 判断权限
-  hasAuth, _, err := DB.CheckAdminAuth(ctx, "idp_admins_group")
+  hasAuth, _, code, err := DB.CheckAdminAuth(ctx, "idp_admins_group")
   if hasAuth != true {
-    ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
+    ctx.JSON(Utils.NewResData(code, err.Error(), ctx))
     return
   }
 
@@ -139,9 +139,9 @@ func GroupPut (ctx context.Context) {
 // 提交数据 0新增、1修改
 func sumbitGroupData(tye int, ctx context.Context) context.Map {
   // 判断权限
-  hasAuth, _, err := DB.CheckAdminAuth(ctx, "idp_admins_group")
+  hasAuth, _, code, err := DB.CheckAdminAuth(ctx, "idp_admins_group")
   if hasAuth != true {
-    return Utils.NewResData(1, err.Error(), ctx)
+    return Utils.NewResData(code, err.Error(), ctx)
   }
 
   var table IdpAdminsGroup
@@ -201,9 +201,9 @@ func sumbitGroupData(tye int, ctx context.Context) context.Map {
 // 删除
 func GroupDel (ctx context.Context) {
   // 判断权限
-  hasAuth, _, err := DB.CheckAdminAuth(ctx, "idp_admins_group")
+  hasAuth, _, code, err := DB.CheckAdminAuth(ctx, "idp_admins_group")
   if hasAuth != true {
-    ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
+    ctx.JSON(Utils.NewResData(code, err.Error(), ctx))
     return
   }
 

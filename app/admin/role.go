@@ -37,9 +37,9 @@ func (RoleAndGroup) TableName() string {
 // 角色列表
 func RoleList (ctx context.Context) {
   // 判断权限
-  hasAuth, stride, err := DB.CheckAdminAuth(ctx, "idp_admins_role")
+  hasAuth, stride, code, err := DB.CheckAdminAuth(ctx, "idp_admins_role")
   if hasAuth != true {
-    ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
+    ctx.JSON(Utils.NewResData(code, err.Error(), ctx))
     return
   }
 
@@ -108,9 +108,9 @@ func RoleList (ctx context.Context) {
 // 详情
 func RoleDetail (ctx context.Context) {
   // 判断权限
-  hasAuth, _, err := DB.CheckAdminAuth(ctx, "idp_admins_role")
+  hasAuth, _, code, err := DB.CheckAdminAuth(ctx, "idp_admins_role")
   if hasAuth != true {
-    ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
+    ctx.JSON(Utils.NewResData(code, err.Error(), ctx))
     return
   }
 
@@ -153,9 +153,9 @@ func RolePut (ctx context.Context) {
 // 提交数据 0新增、1修改
 func sumbitRoleData(tye int, ctx context.Context) context.Map {
   // 判断权限
-  hasAuth, _, err := DB.CheckAdminAuth(ctx, "idp_admins_role")
+  hasAuth, _, code, err := DB.CheckAdminAuth(ctx, "idp_admins_role")
   if hasAuth != true {
-    return Utils.NewResData(1, err.Error(), ctx)
+    return Utils.NewResData(code, err.Error(), ctx)
   }
 
   var table IdpAdminsRole
@@ -226,9 +226,9 @@ func sumbitRoleData(tye int, ctx context.Context) context.Map {
 // 删除
 func RoleDel (ctx context.Context) {
   // 判断权限
-  hasAuth, _, err := DB.CheckAdminAuth(ctx, "idp_admins_role")
+  hasAuth, _, code, err := DB.CheckAdminAuth(ctx, "idp_admins_role")
   if hasAuth != true {
-    ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
+    ctx.JSON(Utils.NewResData(code, err.Error(), ctx))
     return
   }
 

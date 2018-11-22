@@ -36,9 +36,9 @@ func AuthSetTable(ctx context.Context) {
 // 列表
 func AuthSetList (ctx context.Context) {
   // 判断权限
-  hasAuth, _, err := DB.CheckAdminAuth(ctx, "idp_auth_set")
+  hasAuth, _, code, err := DB.CheckAdminAuth(ctx, "idp_auth_set")
   if hasAuth != true {
-    ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
+    ctx.JSON(Utils.NewResData(code, err.Error(), ctx))
     return
   }
 
@@ -75,9 +75,9 @@ func AuthSetList (ctx context.Context) {
 // 详情
 func AuthSetDetail (ctx context.Context) {
   // 判断权限
-  hasAuth, _, err := DB.CheckAdminAuth(ctx, "idp_auth_set")
+  hasAuth, _, code, err := DB.CheckAdminAuth(ctx, "idp_auth_set")
   if hasAuth != true {
-    ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
+    ctx.JSON(Utils.NewResData(code, err.Error(), ctx))
     return
   }
 
@@ -130,9 +130,9 @@ func (company) TableName() string {
 // 提交数据 0新增、1修改
 func sumbitAuthSetData(tye int, ctx context.Context) context.Map {
   // 判断权限
-  hasAuth, _, err := DB.CheckAdminAuth(ctx, "idp_auth_set")
+  hasAuth, _, code, err := DB.CheckAdminAuth(ctx, "idp_auth_set")
   if hasAuth != true {
-    return Utils.NewResData(1, err.Error(), ctx)
+    return Utils.NewResData(code, err.Error(), ctx)
   }
 
   var table company
@@ -203,9 +203,9 @@ func sumbitAuthSetData(tye int, ctx context.Context) context.Map {
 // 删除
 func AuthSetDel (ctx context.Context) {
   // 判断权限
-  hasAuth, _, err := DB.CheckAdminAuth(ctx, "idp_auth_set")
+  hasAuth, _, code, err := DB.CheckAdminAuth(ctx, "idp_auth_set")
   if hasAuth != true {
-    ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
+    ctx.JSON(Utils.NewResData(code, err.Error(), ctx))
     return
   }
 

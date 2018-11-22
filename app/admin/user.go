@@ -14,9 +14,9 @@ import (
 // 列表
 func UserList (ctx context.Context) {
   // 判断权限
-  hasAuth, stride, err := DB.CheckAdminAuth(ctx, "idp_admins")
+  hasAuth, stride, code, err := DB.CheckAdminAuth(ctx, "idp_admins")
   if hasAuth != true {
-    ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
+    ctx.JSON(Utils.NewResData(code, err.Error(), ctx))
     return
   }
 
@@ -122,9 +122,9 @@ func UserList (ctx context.Context) {
 // 用户详情
 func UserDetail(ctx context.Context) {
   // 判断权限
-  hasAuth, _, err := DB.CheckAdminAuth(ctx, "idp_admins")
+  hasAuth, _, code, err := DB.CheckAdminAuth(ctx, "idp_admins")
   if hasAuth != true {
-    ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
+    ctx.JSON(Utils.NewResData(code, err.Error(), ctx))
     return
   }
 
@@ -153,9 +153,9 @@ func UserPut (ctx context.Context) {
 // 提交数据 0新增、1修改
 func sumbitUserData(tye int, ctx context.Context) context.Map {
   // 判断权限
-  hasAuth, _, err := DB.CheckAdminAuth(ctx, "idp_admins")
+  hasAuth, _, code, err := DB.CheckAdminAuth(ctx, "idp_admins")
   if hasAuth != true {
-    return Utils.NewResData(1, err.Error(), ctx)
+    return Utils.NewResData(code, err.Error(), ctx)
   }
 
   var table IdpAdmins
@@ -264,9 +264,9 @@ func sumbitUserData(tye int, ctx context.Context) context.Map {
 // 删除
 func UserDel (ctx context.Context) {
   // 判断权限
-  hasAuth, _, err := DB.CheckAdminAuth(ctx, "idp_admins")
+  hasAuth, _, code, err := DB.CheckAdminAuth(ctx, "idp_admins")
   if hasAuth != true {
-    ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
+    ctx.JSON(Utils.NewResData(code, err.Error(), ctx))
     return
   }
 
