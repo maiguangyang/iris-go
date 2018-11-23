@@ -90,6 +90,7 @@ func Init() {
   {
 
     admin.Get("/detail", Admin.Detail)                // 账户详情
+    admin.Get("/routes", Admin.HandleAdminRoutes)     // 获取用户前端路由
 
     // group
     admin.Get("/group", Admin.GroupList)              // 部门列表

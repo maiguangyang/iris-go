@@ -145,5 +145,28 @@ func GetUserDetail(uid int64, ctx context.Context) context.Map {
   }
 
   return data
+}
 
+// 获取用户的前端路由
+func HandleAdminRoutes(ctx context.Context) {
+  // 获取服务端用户信息
+  reqData, err := Auth.HandleUserJWTToken(ctx, "admin")
+  if err != nil {
+    ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
+    return
+  }
+
+  data := context.Map{}
+  if !Utils.IsEmpty(reqData["rid"]) {
+    sql := `select auth.id, auth.rid, auth.sid, auth.content, a.table_name, a.id as s_id, a.name, a.routes, a.sub_id, b.id as b_id, b.routes as sub_routes from idp_admin_auth as auth left join idp_auth_set as a ON FIND_IN_SET(a.id, auth.sid) left join idp_auth_set as b ON FIND_IN_SET(b.id, a.sub_id) where auth.rid = ?`
+    rows, err := DB.Engine.QueryString(sql, 3)
+
+    if err == nil {
+      data = Utils.NewResData(0, rows, ctx)
+    } else {
+      data = Utils.NewResData(1, "获取前端路由错误", ctx)
+    }
+  }
+
+  ctx.JSON(data)
 }
