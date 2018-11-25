@@ -17,6 +17,7 @@ type IdpAdmins struct {
   Password string `json:"password"`
   Username string `json:"username"`
   Sex int64 `json:"sex"`
+  Super int64 `json:"super"`
   Gid string `json:"gid"`
   Rid string `json:"rid"`
   Aid int64 `json:"aid"`
@@ -82,6 +83,7 @@ func Login(ctx context.Context) {
         "id": table.Id,
         "gid": table.Gid,
         "rid": table.Rid,
+        "super": table.Super,
       }, Public.EncryptMd5(ip + Auth.SecretKey["admin"].(string)), "admin")
 
       table.LastTime = table.LoginTime

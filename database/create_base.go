@@ -38,6 +38,7 @@ const (
     password VARCHAR(64) NULL DEFAULT '' COMMENT '登录密码',
     username VARCHAR(64) NULL DEFAULT '' COMMENT '姓名',
     sex int(2) DEFAULT 0 COMMENT '性别：0未知、1男、2女',
+    super int(2) DEFAULT 1 COMMENT '超级账户：1/否，2/是',
     gid VARCHAR(255) NULL DEFAULT NULL COMMENT '部门：idp_admins_group表id: 1,2,3,4,5',
     rid VARCHAR(255) NULL DEFAULT NULL COMMENT '部门职位：idp_admins_role表id: 1,2,3,4,5',
     money int(11) DEFAULT 0 COMMENT '月薪',

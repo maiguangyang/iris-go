@@ -52,9 +52,27 @@ func RoleList (ctx context.Context) {
   whereValue :=  []interface{}{}
 
   group := filters["group"]
+  name  := filters["name"]
+  state := filters["state"]
+  gid   := filters["gid"]
 
   if !Utils.IsEmpty(group) {
     whereData = DB.IsWhereEmpty(whereData, "idp_admins_role.gid in(" + Utils.ArrayInt64ToString(group) + ")")
+  }
+
+  if !Utils.IsEmpty(name) {
+    whereData = DB.IsWhereEmpty(whereData, `idp_admins_role.name like ?`)
+    whereValue = append(whereValue, `%` + name.(string) + `%`)
+  }
+
+  if !Utils.IsEmpty(state) {
+    whereData = DB.IsWhereEmpty(whereData, `idp_admins_role.state = ?`)
+    whereValue = append(whereValue, state)
+  }
+
+  if !Utils.IsEmpty(gid) {
+    whereData = DB.IsWhereEmpty(whereData, `idp_admins_role.gid = ?`)
+    whereValue = append(whereValue, gid)
   }
 
   // 是否跨部门
@@ -65,6 +83,7 @@ func RoleList (ctx context.Context) {
       ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
       return
     }
+
     if !Utils.IsEmpty(reqData["gid"]) {
       whereData = DB.IsWhereEmpty(whereData, "idp_admins_role.gid =?")
       whereValue = append(whereValue, reqData["gid"])

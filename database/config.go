@@ -96,6 +96,7 @@ func HasInitTable() {
     Username string
     Rid int64
     Aid int64
+    Super int64
     CreatedAt int64 `xorm:"created"`
   }
 
@@ -105,6 +106,7 @@ func HasInitTable() {
   admin.Username = "admin"
   admin.Rid      = 1
   admin.Aid      = 1
+  admin.Super    = 2
 
   has, _ = Engine.IsTableExist("idp_admins")
   empty, _  = Engine.IsTableEmpty(&admin)
@@ -193,8 +195,11 @@ func CheckAdminAuth(ctx context.Context, table string) (bool, bool, int, error) 
     return false, false, 407, err
   }
 
-  rid := reqData["rid"].(string)
-  if rid == "*" {
+  rid   := reqData["rid"].(string)
+  super := int64(reqData["super"].(float64))
+
+  // 如果是超级账户的话，直接返回所有权限
+  if rid == "*" && super == 2 {
     return true, true, 0, nil
   }
 
