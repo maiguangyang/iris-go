@@ -1,7 +1,7 @@
 package admin
 
 import (
-  // "fmt"
+  "fmt"
   // "reflect"
   "github.com/kataras/iris/context"
 
@@ -10,21 +10,23 @@ import (
   DB "../../database"
 )
 
-type IdpAdminsGroup struct {
-  Id int64 `json:"id"`
+type IdpAdminGroup struct {
+  Id int64  `json:"id"`
+  Name string  `json:"name"`
+}
+type AdminGroup struct {
+  // Id int64 `json:"id"`
   Name string `json:"name"`
   Aid int64 `json:"aid"`
   State int64 `json:"state"`
-  DeletedAt int64 `json:"deleted_at" xorm:"deleted"`
-  UpdatedAt int64 `json:"updated_at" xorm:"updated"`
-  CreatedAt int64 `json:"created_at" xorm:"created"`
+  // DeletedAt int64 `json:"deleted_at" xorm:"deleted"`
+  // UpdatedAt int64 `json:"updated_at" xorm:"updated"`
+  // CreatedAt int64 `json:"created_at" xorm:"created"`
 }
 
 
-type roleList = IdpAdminsRole
-
 type GroupAndRole struct {
-  IdpAdminsGroup `xorm:"extends"`
+  IdpAdminGroup `xorm:"extends"`
   // Count int64 `json:"count"`
 }
 
@@ -35,15 +37,18 @@ func (GroupAndRole) TableName() string {
 // 列表
 func GroupList (ctx context.Context) {
   // 判断权限
-  hasAuth, stride, code, err := DB.CheckAdminAuth(ctx, "idp_admins_group")
-  if hasAuth != true {
-    ctx.JSON(Utils.NewResData(code, err.Error(), ctx))
-    return
-  }
+  // hasAuth, stride, code, err := DB.CheckAdminAuth(ctx, "idp_admins_group")
+  // if hasAuth != true {
+  //   ctx.JSON(Utils.NewResData(code, err.Error(), ctx))
+  //   return
+  // }
 
   // 获取分页、总数、limit
-  page, count, limit, _ := DB.Limit(ctx)
-  list := make([]GroupAndRole, 0)
+  page, count, offset, _ := DB.Limit(ctx)
+  list := make([]AdminGroup, 0)
+
+
+  var stride bool = true
 
   // 下面开始是查询条件 where
   whereData  := ""
@@ -65,27 +70,39 @@ func GroupList (ctx context.Context) {
   // 查询条件结束
 
   // 获取统计总数
-  var table IdpAdminsRole
   data := context.Map{}
 
-  total, err := DB.Engine.Where(whereData, whereValue...).Count(&table)
-
-  if err != nil {
-    data = Utils.NewResData(1, err.Error(), ctx)
+  var total int64
+  result := DB.EngineBak.Order("id desc").Where(whereData, whereValue...).Limit(count).Offset(offset).Find(&list).Count(&total)
+  if result.Error != nil {
+    data = Utils.NewResData(1, result.Error, ctx)
   } else {
-    // 获取列表
-    // err = DB.Engine.Desc("g.id").Sql("select g.*, r.* from idp_admins_group as g, idp_admins_role as r where r.gid = g.id").Limit(count, limit).Find(&list)
-    // err = DB.Engine.Desc("g.id").Sql("select g.*, (select count(id) from idp_admins_role as r where r.gid = g.id) as count from idp_admins_group as g").Where(whereData, whereValue...).Limit(count, limit).Find(&list)
-    err = DB.Engine.Desc("id").Where(whereData, whereValue...).Limit(count, limit).Find(&list)
-
-    // 返回数据
-    if err != nil {
-      data = Utils.NewResData(1, err.Error(), ctx)
-    } else {
-      resData := Utils.TotalData(list, page, total, count)
-      data = Utils.NewResData(0, resData, ctx)
-    }
+    resData := Utils.TotalData(list, page, total, count)
+    data = Utils.NewResData(0, resData, ctx)
   }
+
+  fmt.Println(list)
+  fmt.Println(count)
+
+  // var table IdpAdminsRole
+  // total, err := DB.EngineBak.Where(whereData, whereValue...).Count(&table)
+
+  // if err != nil {
+  //   data = Utils.NewResData(1, err.Error(), ctx)
+  // } else {
+    // 获取列表
+    // err = DB.EngineBak.Desc("g.id").Sql("select g.*, r.* from idp_admins_group as g, idp_admins_role as r where r.gid = g.id").Limit(count, limit).Find(&list)
+    // err = DB.EngineBak.Desc("g.id").Sql("select g.*, (select count(id) from idp_admins_role as r where r.gid = g.id) as count from idp_admins_group as g").Where(whereData, whereValue...).Limit(count, limit).Find(&list)
+    // err = DB.EngineBak.Desc("id").Where(whereData, whereValue...).Limit(count).Offset(offset).Find(&list)
+
+    // // 返回数据
+    // if err != nil {
+    //   data = Utils.NewResData(1, err.Error(), ctx)
+    // } else {
+    //   resData := Utils.TotalData(list, page, total, count)
+    //   data = Utils.NewResData(0, resData, ctx)
+    // }
+  // }
 
   ctx.JSON(data)
 
@@ -100,7 +117,7 @@ func GroupDetail (ctx context.Context) {
     return
   }
 
-  var table IdpAdminsGroup
+  var table IdpAdminGroup
   ctx.ReadJSON(&table)
 
   id, _ := ctx.Params().GetInt64("id")
@@ -144,7 +161,7 @@ func sumbitGroupData(tye int, ctx context.Context) context.Map {
     return Utils.NewResData(code, err.Error(), ctx)
   }
 
-  var table IdpAdminsGroup
+  var table IdpAdminGroup
 
   // 根据不同环境返回数据
   err = Utils.ResNodeEnvData(&table, ctx)
@@ -168,7 +185,7 @@ func sumbitGroupData(tye int, ctx context.Context) context.Map {
   }
 
   // 判断数据库里面是否已经存在
-  var exist IdpAdminsGroup
+  var exist IdpAdminGroup
   value := []interface{}{table.Id, table.Name}
   has, err := DB.Engine.Where("id<>? and name=?", value...).Exist(&exist)
 
@@ -207,7 +224,7 @@ func GroupDel (ctx context.Context) {
     return
   }
 
-  var table IdpAdminsGroup
+  var table IdpAdminGroup
 
   // 根据不同环境返回数据
   err = Utils.ResNodeEnvData(&table, ctx)
@@ -217,7 +234,7 @@ func GroupDel (ctx context.Context) {
   }
 
   // 判断数据库里面是否已经存在
-  var exist IdpAdminsGroup
+  var exist IdpAdminGroup
   has, err := DB.Engine.Where("id=?", table.Id).Exist(&exist)
 
   if err != nil {

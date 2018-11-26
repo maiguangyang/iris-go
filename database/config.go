@@ -5,21 +5,28 @@ import (
   // "reflect"
   // "database/sql"
   // "strings"
+  // "time"
   "errors"
   "encoding/json"
   "github.com/kataras/iris/context"
   _ "github.com/go-sql-driver/mysql"
   "github.com/go-xorm/xorm"
+
+  "github.com/jinzhu/gorm"
+
   Auth "../authorization"
   Utils "../utils"
   Public "../public"
 )
 
 var Engine *xorm.Engine
+var EngineBak *gorm.DB
+
+type Model gorm.Model
 
 // 连接
 func OpenSql() error {
-  dataSourceName := "root:123456@tcp(192.168.1.235:3306)/idongpin?charset=utf8mb4"
+  dataSourceName := "root:123456@tcp(192.168.1.235:3306)/idongpin?charset=utf8mb4&parseTime=True&loc=Local"
 
   var err error
 
@@ -36,147 +43,140 @@ func OpenSql() error {
     return err
   }
 
+
+
+  // gorm
+  // 接连数据库，已经连接上，要手动断开连接
+  if EngineBak != nil && EngineBak.DB().Ping() == nil {
+    EngineBak.Close()
+  }
+
+  EngineBak, err = gorm.Open("mysql", dataSourceName)
+  if err != nil {
+    return err
+  }
+
+  err = EngineBak.DB().Ping()
+  if err != nil {
+    defer EngineBak.Close()
+    return err
+  }
+
+  gorm.DefaultTableNameHandler = func (db *gorm.DB, defaultTableName string) string  {
+    return "idp_" + defaultTableName;
+  }
+
+  EngineBak.SingularTable(true)
+  EngineBak.DB().SetMaxIdleConns(2000)
+  EngineBak.DB().SetMaxOpenConns(10000)
   HasInitTable()
+
   return nil
 
 }
 
 // 判断初始化表是否已经存在，不存在则创建
 func HasInitTable() {
-
   // 用户组
-  type IdpAdminsGroup struct {
-    Id int64
+  type AdminGroup struct {
+    gorm.Model
     Name string
     Aid int64
-    CreatedAt int64 `xorm:"created"`
   }
 
-  var group IdpAdminsGroup
-  group.Name = "超级管理员"
-  group.Aid  = 1
+  var group AdminGroup
+  group.Name      = "超级管理员"
+  group.Aid       = 1
 
-  has, _   := Engine.IsTableExist("idp_admins_group")
-  empty, _ := Engine.IsTableEmpty(&group)
-
-  if has == false {
-    CreateTables(IDP_ADMIN_GROUP, group)
-  } else if empty == true {
-    Post(group)
+  has := EngineBak.HasTable(&AdminGroup{})
+  if (has == false) {
+    EngineBak.Exec(IDP_ADMIN_GROUP)
+    EngineBak.Create(&group)
   }
 
   // 角色表
-  type IdpAdminsRole struct {
-    Id int64
+  type AdminRole struct {
+    gorm.Model
     Name string
     Gid int64
     Aid int64
-    CreatedAt int64 `xorm:"created"`
   }
 
-  var role IdpAdminsRole
+  var role AdminRole
   role.Name = "超级管理员"
   role.Gid  = 1
   role.Aid  = 1
 
-  has, _   = Engine.IsTableExist("idp_admins_role")
-  empty, _ = Engine.IsTableEmpty(&role)
-
-  if has == false {
-    CreateTables(IDP_ADMIN_ROLE, role)
-  } else if empty == true {
-    Post(role)
+  has = EngineBak.HasTable(&AdminRole{})
+  if (has == false) {
+    EngineBak.Exec(IDP_ADMIN_ROLE)
+    EngineBak.Create(&role)
   }
 
   // 人员表
-  type IdpAdmins struct {
-    Id int64
+  type Admins struct {
+    gorm.Model
     Phone string
     Password string
     Username string
+    Gid int64
     Rid int64
     Aid int64
     Super int64
-    CreatedAt int64 `xorm:"created"`
   }
 
-  var admin IdpAdmins
+  var admin Admins
   admin.Phone    = "13800138000"
   admin.Password = Public.EncryptPassword("123456")
   admin.Username = "admin"
+  admin.Gid      = 1
   admin.Rid      = 1
   admin.Aid      = 1
   admin.Super    = 2
 
-  has, _ = Engine.IsTableExist("idp_admins")
-  empty, _  = Engine.IsTableEmpty(&admin)
-
-  if has == false {
-    CreateTables(IDP_ADMIN, admin)
-  } else if empty == true {
-    Post(admin)
+  has = EngineBak.HasTable(&Admins{})
+  if (has == false) {
+    EngineBak.Exec(IDP_ADMIN)
+    EngineBak.Create(&admin)
   }
 
+
   // 权限配置表
-  has, _ = Engine.IsTableExist("idp_auth_set")
+  has = EngineBak.HasTable("idp_auth_set")
   if has == false {
-    CreateTables(IDP_AUTH_SET, nil)
+    EngineBak.Exec(IDP_AUTH_SET)
   }
 
   // 员工资料
-  has, _ = Engine.IsTableExist("idp_admin_archive")
+  has = EngineBak.HasTable("idp_admin_archive")
   if has == false {
-    CreateTables(IDP_ADMIN_ARCHIVE, nil)
+    EngineBak.Exec(IDP_ADMIN_ARCHIVE)
   }
 
   // 权限表
-  type IdpAdminAuth struct {
-    Id int64
+  type AdminAuth struct {
+    gorm.Model
     Rid int64
     Sid string
     Content string
     Auth int64
-    CreatedAt int64 `xorm:"created"`
   }
 
-  var auth IdpAdminAuth
+  var auth AdminAuth
   auth.Rid = 1
   auth.Sid = "*"
   auth.Content = "*"
   auth.Auth = 1
 
-  has, _   = Engine.IsTableExist("idp_admin_auth")
-  empty, _ = Engine.IsTableEmpty(&auth)
-
-  if has == false {
-    CreateTables(IDP_ADMIN_AUTH, auth)
-  } else if empty == true {
-    Post(auth)
+  has = EngineBak.HasTable(&AdminAuth{})
+  if (has == false) {
+    EngineBak.Exec(IDP_ADMIN_AUTH)
+    EngineBak.Create(&auth)
   }
 
   // fmt.Println(Public.DecryptPassword("admin", "c02f8a145384b65099b17b9d64dd03e1"))
 
 }
-
-// 创建表
-func CreateTables(tableName string, table interface{}) {
-  _, err := Engine.Exec(tableName)
-
-  if err != nil {
-    CheckErr(err)
-  } else if table != nil {
-    err = Post(table)
-    CheckErr(err)
-  }
-}
-
-// 新增数据
-func Post(table interface{}) error {
-  // TODU 用户权限验证
-  _, err := Engine.Insert(table)
-  return err
-}
-
 
 func CheckAdminAuth(ctx context.Context, table string) (bool, bool, int, error) {
   type IdpAdminAuth struct {
@@ -199,7 +199,7 @@ func CheckAdminAuth(ctx context.Context, table string) (bool, bool, int, error) 
   super := int64(reqData["super"].(float64))
 
   // 如果是超级账户的话，直接返回所有权限
-  if rid == "*" && super == 2 {
+  if super == 2 {
     return true, true, 0, nil
   }
 

@@ -25,7 +25,7 @@ type IdpAdminsRole struct {
 
 type RoleAndGroup struct {
   IdpAdminsRole `xorm:"extends"`
-  Group IdpAdminsGroup `json:"group" xorm:"extends"`
+  Group AdminGroup `json:"group" xorm:"extends"`
   Auth IdpAdminAuth `json:"auth" xorm:"extends"`
 }
 

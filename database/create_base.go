@@ -14,8 +14,9 @@ const (
     sid VARCHAR(1000) NULL DEFAULT null COMMENT '权限表对应id',
     content TEXT(60000) NOT NULL COMMENT 'json格式配置文件',
     auth INT(2) NULL DEFAULT 2 COMMENT '跨部门查看：1/是，2/否',
-    updated_at INT(11) NULL DEFAULT NULL COMMENT '修改时间',
-    created_at INT(11) NULL DEFAULT NULL COMMENT '创建时间',
+    deleted_at TIMESTAMP NULL DEFAULT NULL COMMENT '删除时间',
+    updated_at TIMESTAMP NULL DEFAULT NULL COMMENT '修改时间',
+    created_at TIMESTAMP NULL DEFAULT NULL COMMENT '创建时间',
     PRIMARY KEY (id)
   )`
 
@@ -26,8 +27,9 @@ const (
     table_name VARCHAR(1000) NULL DEFAULT '' COMMENT '数据表',
     routes TEXT(60000) NOT NULL COMMENT '前端路由权限',
     sub_id VARCHAR(255) NULL DEFAULT '' COMMENT '附属权限arrar',
-    updated_at INT(11) NULL DEFAULT NULL COMMENT '修改时间',
-    created_at INT(11) NULL DEFAULT NULL COMMENT '创建时间',
+    deleted_at TIMESTAMP NULL DEFAULT NULL COMMENT '删除时间',
+    updated_at TIMESTAMP NULL DEFAULT NULL COMMENT '修改时间',
+    created_at TIMESTAMP NULL DEFAULT NULL COMMENT '创建时间',
     PRIMARY KEY (id)
   )`
 
@@ -43,20 +45,20 @@ const (
     rid VARCHAR(255) NULL DEFAULT NULL COMMENT '部门职位：idp_admins_role表id: 1,2,3,4,5',
     money int(11) DEFAULT 0 COMMENT '月薪',
     job_state int(2) DEFAULT NULL COMMENT '职位状态：1试用期、2转正、3离职',
-    entry_time INT(11) NULL DEFAULT NULL COMMENT '入职时间',
-    trial_time INT(11) NULL DEFAULT NULL COMMENT '试用期时间',
-    contract_time INT(11) NULL DEFAULT NULL COMMENT '合同到期时间',
-    quit_time INT(11) NULL DEFAULT NULL COMMENT '离职时间',
+    entry_time TIMESTAMP NULL DEFAULT NULL COMMENT '入职时间',
+    trial_time TIMESTAMP NULL DEFAULT NULL COMMENT '试用期时间',
+    contract_time TIMESTAMP NULL DEFAULT NULL COMMENT '合同到期时间',
+    quit_time TIMESTAMP NULL DEFAULT NULL COMMENT '离职时间',
     state INT(2) NULL DEFAULT 1 COMMENT '账号状态：1启动、2禁用',
     aid INT(11) NULL DEFAULT 1 COMMENT '操作员：1系统添加、其他对应该表的id字段',
     login_count INT(11) NULL DEFAULT 0 COMMENT '登陆次数',
-    login_time INT(11) NULL DEFAULT NULL COMMENT '登陆时间',
-    last_time INT(11) NULL DEFAULT NULL COMMENT '上次登陆时间',
+    login_time TIMESTAMP NULL DEFAULT NULL COMMENT '登陆时间',
+    last_time TIMESTAMP NULL DEFAULT NULL COMMENT '上次登陆时间',
     login_ip VARCHAR(255) NULL DEFAULT NULL COMMENT '登陆Ip',
     last_ip VARCHAR(255) NULL DEFAULT NULL COMMENT '上次登陆Ip',
-    deleted_at INT(11) NULL DEFAULT NULL COMMENT '删除时间',
-    updated_at INT(11) NULL DEFAULT NULL COMMENT '修改时间',
-    created_at INT(11) NULL DEFAULT NULL COMMENT '创建时间',
+    deleted_at TIMESTAMP NULL DEFAULT NULL COMMENT '删除时间',
+    updated_at TIMESTAMP NULL DEFAULT NULL COMMENT '修改时间',
+    created_at TIMESTAMP NULL DEFAULT NULL COMMENT '创建时间',
     PRIMARY KEY (id)
   )`
 
@@ -84,34 +86,34 @@ const (
     job_change int(2) DEFAULT NULL COMMENT '职务变更：0不变、其他的对应job_change表id',
     money_change int(11) DEFAULT NULL COMMENT '工资调整：0不变、其他的对应money_change表id',
     remarks VARCHAR(1000) NULL DEFAULT NULL COMMENT '备注',
-    deleted_at INT(11) NULL DEFAULT NULL COMMENT '删除时间',
-    updated_at INT(11) NULL DEFAULT NULL COMMENT '修改时间',
-    created_at INT(11) NULL DEFAULT NULL COMMENT '创建时间',
+    deleted_at TIMESTAMP NULL DEFAULT NULL COMMENT '删除时间',
+    updated_at TIMESTAMP NULL DEFAULT NULL COMMENT '修改时间',
+    created_at TIMESTAMP NULL DEFAULT NULL COMMENT '创建时间',
     PRIMARY KEY (id)
   )`
 
   // 部门表
-  IDP_ADMIN_GROUP = `CREATE TABLE idp_admins_group (
+  IDP_ADMIN_GROUP = `CREATE TABLE idp_admin_group (
     id INT(11) NOT NULL AUTO_INCREMENT COMMENT 'id',
     name VARCHAR(64) NULL DEFAULT '' COMMENT '组名称',
     aid INT(11) NULL DEFAULT 1 COMMENT '操作员：1管理员添加、其他对应操作账户的id',
     state INT(2) NULL DEFAULT 1 COMMENT '状态：1启动、2禁用',
-    deleted_at INT(11) NULL DEFAULT NULL COMMENT '删除时间',
-    updated_at INT(11) NULL DEFAULT NULL COMMENT '修改时间',
-    created_at INT(11) NULL DEFAULT NULL COMMENT '创建时间',
+    deleted_at TIMESTAMP NULL DEFAULT NULL COMMENT '删除时间',
+    updated_at TIMESTAMP NULL DEFAULT NULL COMMENT '修改时间',
+    created_at TIMESTAMP NULL DEFAULT NULL COMMENT '创建时间',
     PRIMARY KEY (id)
   )`
 
   // 角色表
-  IDP_ADMIN_ROLE = `CREATE TABLE idp_admins_role (
+  IDP_ADMIN_ROLE = `CREATE TABLE idp_admin_role (
     id INT(11) NOT NULL AUTO_INCREMENT COMMENT 'id',
     name VARCHAR(64) NULL DEFAULT '' COMMENT '角色名称',
     gid INT(11) NULL DEFAULT NULL COMMENT 'GROUP表关联Id',
     aid INT(11) NULL DEFAULT 1 COMMENT '操作员：1管理员添加、其他对应操作账户的id',
     state INT(2) NULL DEFAULT 1 COMMENT '状态：1启动、2禁用',
-    deleted_at INT(11) NULL DEFAULT NULL COMMENT '删除时间',
-    updated_at INT(11) NULL DEFAULT NULL COMMENT '修改时间',
-    created_at INT(11) NULL DEFAULT NULL COMMENT '创建时间',
+    deleted_at TIMESTAMP NULL DEFAULT NULL COMMENT '删除时间',
+    updated_at TIMESTAMP NULL DEFAULT NULL COMMENT '修改时间',
+    created_at TIMESTAMP NULL DEFAULT NULL COMMENT '创建时间',
     PRIMARY KEY (id)
   )`
 )
