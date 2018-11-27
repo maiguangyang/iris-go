@@ -5,7 +5,7 @@ import (
   // "reflect"
   // "database/sql"
   // "strings"
-  // "time"
+  "time"
   "errors"
   "encoding/json"
   "github.com/kataras/iris/context"
@@ -23,6 +23,7 @@ var Engine *xorm.Engine
 var EngineBak *gorm.DB
 
 type Model gorm.Model
+
 
 // 连接
 func OpenSql() error {
@@ -62,9 +63,9 @@ func OpenSql() error {
     return err
   }
 
-  gorm.DefaultTableNameHandler = func (db *gorm.DB, defaultTableName string) string  {
-    return "idp_" + defaultTableName;
-  }
+  // gorm.DefaultTableNameHandler = func (db *gorm.DB, defaultTableName string) string  {
+  //   return "idp_" + defaultTableName;
+  // }
 
   EngineBak.SingularTable(true)
   EngineBak.DB().SetMaxIdleConns(2000)
@@ -78,43 +79,43 @@ func OpenSql() error {
 // 判断初始化表是否已经存在，不存在则创建
 func HasInitTable() {
   // 用户组
-  type AdminGroup struct {
+  type IdpAdminGroup struct {
     gorm.Model
     Name string
     Aid int64
   }
 
-  var group AdminGroup
+  var group IdpAdminGroup
   group.Name      = "超级管理员"
   group.Aid       = 1
 
-  has := EngineBak.HasTable(&AdminGroup{})
+  has := EngineBak.HasTable(&IdpAdminGroup{})
   if (has == false) {
     EngineBak.Exec(IDP_ADMIN_GROUP)
     EngineBak.Create(&group)
   }
 
   // 角色表
-  type AdminRole struct {
+  type IdpAdminRole struct {
     gorm.Model
     Name string
     Gid int64
     Aid int64
   }
 
-  var role AdminRole
+  var role IdpAdminRole
   role.Name = "超级管理员"
   role.Gid  = 1
   role.Aid  = 1
 
-  has = EngineBak.HasTable(&AdminRole{})
+  has = EngineBak.HasTable(&IdpAdminRole{})
   if (has == false) {
     EngineBak.Exec(IDP_ADMIN_ROLE)
     EngineBak.Create(&role)
   }
 
   // 人员表
-  type Admins struct {
+  type IdpAdmins struct {
     gorm.Model
     Phone string
     Password string
@@ -125,7 +126,7 @@ func HasInitTable() {
     Super int64
   }
 
-  var admin Admins
+  var admin IdpAdmins
   admin.Phone    = "13800138000"
   admin.Password = Public.EncryptPassword("123456")
   admin.Username = "admin"
@@ -134,7 +135,7 @@ func HasInitTable() {
   admin.Aid      = 1
   admin.Super    = 2
 
-  has = EngineBak.HasTable(&Admins{})
+  has = EngineBak.HasTable(&IdpAdmins{})
   if (has == false) {
     EngineBak.Exec(IDP_ADMIN)
     EngineBak.Create(&admin)
@@ -154,7 +155,7 @@ func HasInitTable() {
   }
 
   // 权限表
-  type AdminAuth struct {
+  type IdpAdminAuth struct {
     gorm.Model
     Rid int64
     Sid string
@@ -162,13 +163,13 @@ func HasInitTable() {
     Auth int64
   }
 
-  var auth AdminAuth
+  var auth IdpAdminAuth
   auth.Rid = 1
   auth.Sid = "*"
   auth.Content = "*"
   auth.Auth = 1
 
-  has = EngineBak.HasTable(&AdminAuth{})
+  has = EngineBak.HasTable(&IdpAdminAuth{})
   if (has == false) {
     EngineBak.Exec(IDP_ADMIN_AUTH)
     EngineBak.Create(&auth)
@@ -180,13 +181,14 @@ func HasInitTable() {
 
 func CheckAdminAuth(ctx context.Context, table string) (bool, bool, int, error) {
   type IdpAdminAuth struct {
-    Id int64 `json:"id"`
+    Id int64 `json:"id" gorm:"primary_key"`
     Rid int64 `json:"rid"`
     Sid string `json:"sid"`
     Content string `json:"content"`
     Auth int64 `json:"auth"`
-    UpdatedAt int64 `json:"updated_at" xorm:"updated"`
-    CreatedAt int64 `json:"created_at" xorm:"created"`
+    DeletedAt *time.Time `json:"deleted_at"`
+    UpdatedAt time.Time `json:"updated_at"`
+    CreatedAt time.Time `json:"created_at"`
   }
 
   // 获取服务端用户信息
@@ -215,9 +217,7 @@ func CheckAdminAuth(ctx context.Context, table string) (bool, bool, int, error) 
 
 // 返回用户的权限
 func AuthData(ctx context.Context, str interface{}, rid, table string) (bool, bool, error) {
-  err := Engine.Desc("id").Where("rid in(" + rid + ")").Limit(10000, 0).Find(str)
-
-  if err != nil {
+  if err := EngineBak.Order("id desc").Where("rid in(" + rid + ")").Limit(50000).Offset(0).Find(str).Error; err != nil {
     return false, false, err
   }
 

@@ -13,35 +13,36 @@ import(
   DB "../../database"
 )
 
-type IdpAdmins struct {
-  Id int64 `json:"id"`
-  Phone string `json:"phone"`
-  Password string `json:"password"`
-  Username string `json:"username"`
-  Sex int64 `json:"sex"`
-  Super int64 `json:"super"`
-  Gid string `json:"gid"`
-  Rid string `json:"rid"`
-  Aid int64 `json:"aid"`
-  Money int64 `json:"money" xorm:"default(0)"`
-  State int64 `json:"state"`
-  JobState int64 `json:"job_state"`
-  LoginCount int64 `json:"login_count" xorm:"version"`
-  LoginTime int64 `json:"login_time" xorm:"updated"`
-  LastTime int64 `json:"last_time"`
-  LoginIp string `json:"login_ip"`
-  LastIp string `json:"last_ip"`
-  EntryTime int64 `json:"entry_time"`
-  QuitTime int64 `json:"quit_time"`
-  TrialTime int64 `json:"trial_time"`
-  ContractTime int64 `json:"contract_time"`
-  DeletedAt int64 `json:"deleted_at"`
-  UpdatedAt int64 `json:"updated_at" xorm:"updated"`
-  CreatedAt int64 `json:"created_at" xorm:"created"`
-}
+// type Admins struct {
+//   Id int64 `json:"id"`
+//   Phone string `json:"phone"`
+//   Password string `json:"password"`
+//   Username string `json:"username"`
+//   Sex int64 `json:"sex"`
+//   Super int64 `json:"super"`
+//   Gid string `json:"gid"`
+//   Rid string `json:"rid"`
+//   Aid int64 `json:"aid"`
+//   Money int64 `json:"money" xorm:"default(0)"`
+//   State int64 `json:"state"`
+//   JobState int64 `json:"job_state"`
+//   LoginCount int64 `json:"login_count" xorm:"version"`
+//   LoginTime int64 `json:"login_time"`
+//   LastTime int64 `json:"last_time"`
+//   LoginIp string `json:"login_ip"`
+//   LastIp string `json:"last_ip"`
+//   EntryTime int64 `json:"entry_time"`
+//   QuitTime int64 `json:"quit_time"`
+//   TrialTime int64 `json:"trial_time"`
+//   ContractTime int64 `json:"contract_time"`
+//   DeletedAt int64 `json:"deleted_at"`
+//   UpdatedAt int64 `json:"updated_at" xorm:"updated"`
+//   CreatedAt int64 `json:"created_at" xorm:"created"`
+// }
 
-type Admins struct {
-  DB.Model
+type IdpAdmins struct {
+  // DB.Model
+  Id int64 `json:"id" gorm:"primary_key"`
   Phone string `json:"phone"`
   Password string `json:"password"`
   Username string `json:"username"`
@@ -62,23 +63,15 @@ type Admins struct {
   QuitTime time.Time `json:"quit_time"`
   TrialTime time.Time `json:"trial_time"`
   ContractTime time.Time `json:"contract_time"`
-
+  DeletedAt *time.Time `json:"deleted_at"`
+  UpdatedAt time.Time `json:"updated_at"`
+  CreatedAt time.Time `json:"created_at"`
 }
-
-type UserDetailGroup struct {
-  Group []*IdpAdminsRole `json:"group" xorm:"extends"`
-  IdpAdmins `xorm:"extends"`
-}
-
-func (UserDetailGroup) TableName() string {
-  return "idp_admins"
-}
-
 
 // 登陆
 func Login(ctx context.Context) {
 
-  var table Admins
+  var table IdpAdmins
   timestamp := time.Now()
 
   // 根据不同环境返回数据
@@ -103,7 +96,7 @@ func Login(ctx context.Context) {
       // 返回前端的Token
       ip := ctx.RemoteAddr()
       token := Auth.SetToken(context.Map{
-        "id": table.ID,
+        "id": table.Id,
         "gid": table.Gid,
         "rid": table.Rid,
         "super": table.Super,
@@ -153,7 +146,7 @@ func Detail (ctx context.Context) {
 // 获取用户信息方法
 func GetUserDetail(uid int64, ctx context.Context) context.Map {
 
-  var table Admins
+  var table IdpAdmins
   // table.Id = uid
 
   result := DB.EngineBak.Where("id=?", uid).Omit("password").First(&table)

@@ -2,6 +2,7 @@ package admin
 
 import (
   // "fmt"
+  "time"
   // "reflect"
   // "encoding/json"
   "github.com/kataras/iris/context"
@@ -12,40 +13,42 @@ import (
   DB "../../database"
 )
 
-type IdpAdminsRole struct {
-  Id int64 `json:"id"`
+
+type IdpAdminRoles struct {
+  Id int64 `json:"id" gorm:"primary_key"`
   Name string `json:"name"`
   Gid int64 `json:"gid"`
   Aid int64 `json:"aid"`
   State int64 `json:"state"`
-  DeletedAt int64 `json:"deleted_at" xorm:"deleted"`
-  UpdatedAt int64 `json:"updated_at" xorm:"updated"`
-  CreatedAt int64 `json:"created_at" xorm:"created"`
+  DeletedAt *time.Time `json:"deleted_at"`
+  UpdatedAt time.Time `json:"updated_at"`
+  CreatedAt time.Time `json:"created_at"`
+
 }
 
-type RoleAndGroup struct {
-  IdpAdminsRole `xorm:"extends"`
-  Group AdminGroup `json:"group" xorm:"extends"`
-  Auth IdpAdminAuth `json:"auth" xorm:"extends"`
+func (IdpAdminRoles) TableName() string {
+  return "idp_admin_role"
 }
 
-func (RoleAndGroup) TableName() string {
-  return "idp_admins_role"
+type IdpAdminRole struct {
+  IdpAdminRoles
+  Group IdpAdminGroups `json:"group" gorm:"foreignkey:Gid"`
+  Auth []IdpAdminAuth `json:"auth" gorm:"foreignkey:Rid"`
 }
-
 
 // 角色列表
 func RoleList (ctx context.Context) {
   // 判断权限
-  hasAuth, stride, code, err := DB.CheckAdminAuth(ctx, "idp_admins_role")
+  hasAuth, stride, code, err := DB.CheckAdminAuth(ctx, "idp_admin_role")
   if hasAuth != true {
     ctx.JSON(Utils.NewResData(code, err.Error(), ctx))
     return
   }
 
   // 获取分页、总数、limit
-  page, count, limit, filters := DB.Limit(ctx)
-  list := make([]RoleAndGroup, 0)
+  // page, count, limit, filters := DB.Limit(ctx)
+  page, count, offset, filters := DB.Limit(ctx)
+  list := make([]IdpAdminRole, 0)
 
   // 下面开始是查询条件 where
   whereData  := ""
@@ -57,21 +60,21 @@ func RoleList (ctx context.Context) {
   gid   := filters["gid"]
 
   if !Utils.IsEmpty(group) {
-    whereData = DB.IsWhereEmpty(whereData, "idp_admins_role.gid in(" + Utils.ArrayInt64ToString(group) + ")")
+    whereData = DB.IsWhereEmpty(whereData, "gid in(" + Utils.ArrayInt64ToString(group) + ")")
   }
 
   if !Utils.IsEmpty(name) {
-    whereData = DB.IsWhereEmpty(whereData, `idp_admins_role.name like ?`)
+    whereData = DB.IsWhereEmpty(whereData, `name like ?`)
     whereValue = append(whereValue, `%` + name.(string) + `%`)
   }
 
   if !Utils.IsEmpty(state) {
-    whereData = DB.IsWhereEmpty(whereData, `idp_admins_role.state = ?`)
+    whereData = DB.IsWhereEmpty(whereData, `state = ?`)
     whereValue = append(whereValue, state)
   }
 
   if !Utils.IsEmpty(gid) {
-    whereData = DB.IsWhereEmpty(whereData, `idp_admins_role.gid = ?`)
+    whereData = DB.IsWhereEmpty(whereData, `gid = ?`)
     whereValue = append(whereValue, gid)
   }
 
@@ -85,41 +88,24 @@ func RoleList (ctx context.Context) {
     }
 
     if !Utils.IsEmpty(reqData["gid"]) {
-      whereData = DB.IsWhereEmpty(whereData, "idp_admins_role.gid =?")
+      whereData = DB.IsWhereEmpty(whereData, "gid =?")
       whereValue = append(whereValue, reqData["gid"])
     }
   }
   // 查询条件结束
 
-
-  // 连表查询，下面进行了1个连表
-  joinTable  := make(map[int]map[string]string)
-  joinTable[0] = map[string]string {
-    "type"  : "LEFT",
-    "table" : "idp_admins_group",
-    "where" : "idp_admins_role.gid = idp_admins_group.id",
-  }
-
-  // 获取统计总数
-  var table RoleAndGroup
+  // 查询列表
   data := context.Map{}
+  var total int64
+  result := DB.EngineBak.Model(&list).Order("id desc").Where(whereData, whereValue...).Limit(count).Offset(offset).Preload("Group").Preload("Auth").Find(&list).Count(&total)
 
-  total, err := DB.Engine.Join(joinTable[0]["type"], joinTable[0]["table"], joinTable[0]["where"]).Where(whereData, whereValue...).Count(&table)
-
-  if err != nil {
-    data = Utils.NewResData(1, err.Error(), ctx)
+  if result.Error != nil {
+    data = Utils.NewResData(1, "return data is empty.", ctx)
   } else {
-    // 获取列表
-    err = DB.Engine.Desc("idp_admins_role.id").Join(joinTable[0]["type"], joinTable[0]["table"], joinTable[0]["where"]).Where(whereData, whereValue...).Limit(count, limit).Find(&list)
-
-    // 返回数据
-    if err != nil {
-      data = Utils.NewResData(1, err.Error(), ctx)
-    } else {
-      resData := Utils.TotalData(list, page, total, count)
-      data = Utils.NewResData(0, resData, ctx)
-    }
+    resData := Utils.TotalData(list, page, total, count)
+    data = Utils.NewResData(0, resData, ctx)
   }
+
   ctx.JSON(data)
 
 }
@@ -127,32 +113,25 @@ func RoleList (ctx context.Context) {
 // 详情
 func RoleDetail (ctx context.Context) {
   // 判断权限
-  hasAuth, _, code, err := DB.CheckAdminAuth(ctx, "idp_admins_role")
+  hasAuth, _, code, err := DB.CheckAdminAuth(ctx, "idp_admin_role")
   if hasAuth != true {
     ctx.JSON(Utils.NewResData(code, err.Error(), ctx))
     return
   }
 
-  var table RoleAndGroup
+  var table IdpAdminRole
   ctx.ReadJSON(&table)
 
   id, _ := ctx.Params().GetInt64("id")
   table.Id = id
 
-  has, err := DB.Engine.Join("LEFT", "idp_admins_group", "idp_admins_role.gid = idp_admins_group.id").Join("LEFT", "idp_admin_auth", "idp_admin_auth.rid = idp_admins_role.id").Get(&table)
-  if err != nil {
-    ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
+  result := DB.EngineBak.Model(&table).Where("id =?", table.Id).Preload("Group").Preload("Auth").First(&table)
+  if result.Error != nil {
+    ctx.JSON(Utils.NewResData(1, "return data is empty.", ctx))
     return
   }
 
-  data := context.Map{}
-  if has == true {
-    data = Utils.NewResData(0, table, ctx)
-  } else {
-    data = Utils.NewResData(1, "记录不存在", ctx)
-  }
-
-  ctx.JSON(data)
+  ctx.JSON(Utils.NewResData(0, table, ctx))
 
 }
 
@@ -172,12 +151,12 @@ func RolePut (ctx context.Context) {
 // 提交数据 0新增、1修改
 func sumbitRoleData(tye int, ctx context.Context) context.Map {
   // 判断权限
-  hasAuth, _, code, err := DB.CheckAdminAuth(ctx, "idp_admins_role")
+  hasAuth, _, code, err := DB.CheckAdminAuth(ctx, "idp_admin_role")
   if hasAuth != true {
     return Utils.NewResData(code, err.Error(), ctx)
   }
 
-  var table IdpAdminsRole
+  var table IdpAdminRoles
 
   // 根据不同环境返回数据
   err = Utils.ResNodeEnvData(&table, ctx)
@@ -204,54 +183,36 @@ func sumbitRoleData(tye int, ctx context.Context) context.Map {
   }
 
   // 判断数据库里面是否已经存在
-  var exist IdpAdminsRole
-  value := []interface{}{table.Id, table.Gid, table.Name}
-  has, err := DB.Engine.Where("id<>? and gid=? and name=?", value...).Exist(&exist)
-
-  if err != nil {
-    return Utils.NewResData(1, err.Error(), ctx)
-  }
-
-  if has == true {
+  value := []interface{}{table.Id, table.Name}
+  if err := DB.EngineBak.Where("id<>? and name=?", value...).First(&table).Error; err == nil {
     return Utils.NewResData(1, table.Name + "已存在", ctx)
   }
 
-  // 写入数据库
-  tipsText := "添加"
+  // tipsText := "添加"
   if tye == 1 {
-    tipsText = "修改"
-    // 修改
-    _, err = DB.Engine.Id(table.Id).Update(&table)
-  } else {
+    if err := DB.EngineBak.Model(&table).Where("id =?", table.Id).Updates(&table).Error; err != nil {
+      return Utils.NewResData(1, "修改失败", ctx)
+    }
+    return Utils.NewResData(0, "修改成功", ctx)
+  }
     // 新增
-    _, err = DB.Engine.Insert(&table)
+  if err := DB.EngineBak.Create(&table).Error; err != nil {
+    return Utils.NewResData(1, "添加失败", ctx)
   }
+  return Utils.NewResData(0, "添加成功", ctx)
 
-
-  if err != nil {
-    return Utils.NewResData(1, err.Error(), ctx)
-  }
-
-  // 新增返回并
-  if tye == 0 {
-    return Utils.NewResData(0, context.Map{
-      "rid": table.Id,
-    }, ctx)
-  }
-
-  return Utils.NewResData(0, tipsText + "成功", ctx)
 }
 
 // 删除
 func RoleDel (ctx context.Context) {
   // 判断权限
-  hasAuth, _, code, err := DB.CheckAdminAuth(ctx, "idp_admins_role")
+  hasAuth, _, code, err := DB.CheckAdminAuth(ctx, "idp_admin_role")
   if hasAuth != true {
     ctx.JSON(Utils.NewResData(code, err.Error(), ctx))
     return
   }
 
-  var table IdpAdminsRole
+  var table IdpAdminRoles
 
   // 根据不同环境返回数据
   err = Utils.ResNodeEnvData(&table, ctx)
@@ -261,41 +222,24 @@ func RoleDel (ctx context.Context) {
   }
 
   // 判断数据库里面是否已经存在
-  var exist IdpAdminsRole
-  has, err := DB.Engine.Where("id=?", table.Id).Exist(&exist)
-
-  if err != nil {
-    ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
-    return
-  }
-
-  if has != true {
+  if err := DB.EngineBak.Where("id=?", table.Id).First(&table).Error; err != nil {
     ctx.JSON(Utils.NewResData(1, "该信息不存在", ctx))
     return
   }
 
   // 判断角色管理表是否存在，如果存在的话，不予删除
-  var adminExist IdpAdmins
-  has, err = DB.Engine.Where("rid=?", table.Id).Exist(&adminExist)
-
-  if err != nil {
-    ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
-    return
-  }
-
-  if has == true {
+  var adminsExist IdpAdmins
+  if err := DB.EngineBak.Where("gid=?", table.Id).First(&adminsExist).Error; err == nil {
     ctx.JSON(Utils.NewResData(1, "无法删除，员工管理中使用了该值", ctx))
     return
   }
 
   // 开始删除
-  _, err = DB.Engine.Id(table.Id).Delete(&table)
-
   data := context.Map{}
-  if err == nil {
-    data = Utils.NewResData(0, "删除成功", ctx)
-  } else {
+  if err := DB.EngineBak.Where("id =?", table.Id).Delete(&table).Error; err != nil {
     data = Utils.NewResData(1, err.Error(), ctx)
+  } else {
+    data = Utils.NewResData(0, "删除成功", ctx)
   }
 
   ctx.JSON(data)

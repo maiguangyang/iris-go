@@ -2,6 +2,7 @@ package admin
 
 import(
   // "fmt"
+  "time"
   // "reflect"
   // "encoding/json"
   "github.com/kataras/iris/context"
@@ -16,9 +17,10 @@ type IdpAdminAuth struct {
   Rid int64 `json:"rid"`
   Sid string `json:"sid"`
   Content string `json:"content"`
-  Auth int64 `json:"auth" xorm:"default(2)"`
-  UpdatedAt int64 `json:"updated_at" xorm:"updated"`
-  CreatedAt int64 `json:"created_at" xorm:"created"`
+  Auth int64 `json:"auth"`
+  DeletedAt *time.Time `json:"deleted_at"`
+  UpdatedAt time.Time `json:"updated_at"`
+  CreatedAt time.Time `json:"created_at"`
 }
 
 // 列表
@@ -32,28 +34,20 @@ func AdminAuthList (ctx context.Context) {
   }
 
   // 获取分页、总数、limit
-  page, count, limit, _ := DB.Limit(ctx)
+  page, count, offset, _ := DB.Limit(ctx)
   list := make([]IdpAdminAuth, 0)
 
-  // 获取统计总数
-  var table IdpAdminAuth
+  // 查询列表
   data := context.Map{}
 
-  total, err := DB.Engine.Count(&table)
+  var total int64
+  result := DB.EngineBak.Model(&list).Order("id desc").Limit(count).Offset(offset).Find(&list).Count(&total)
 
-  if err != nil {
-    data = Utils.NewResData(1, err.Error(), ctx)
+  if result.Error != nil {
+    data = Utils.NewResData(1, "return data is empty.", ctx)
   } else {
-    // 获取列表
-    err = DB.Engine.Desc("id").Limit(count, limit).Find(&list)
-
-    // 返回数据
-    if err != nil {
-      data = Utils.NewResData(1, err.Error(), ctx)
-    } else {
-      resData := Utils.TotalData(list, page, total, count)
-      data = Utils.NewResData(0, resData, ctx)
-    }
+    resData := Utils.TotalData(list, page, total, count)
+    data = Utils.NewResData(0, resData, ctx)
   }
 
   ctx.JSON(data)
@@ -85,7 +79,7 @@ func AdminAuthDetail (ctx context.Context) {
   if has == true {
     data = Utils.NewResData(0, table, ctx)
   } else {
-    data = Utils.NewResData(1, "记录不存在", ctx)
+    data = Utils.NewResData(1, "return data is empty.", ctx)
   }
 
   ctx.JSON(data)

@@ -2,6 +2,7 @@ package admin
 
 import(
   // "fmt"
+  "time"
   "github.com/kataras/iris/context"
   // Public "../../public"
   DB "../../database"
@@ -9,27 +10,30 @@ import(
 )
 
 type IdpAuthSet struct {
-  Id int64 `json:"id"`
+  Id int64 `json:"id" gorm:"primary_key"`
   Name string `json:"name"`
   TableName string `json:"table_name"`
   Routes string `json:"routes"`
   SubId string `json:"sub_id"`
-  SubName string `json:"sub_name" xorm:"<-"`
-  UpdatedAt int64 `json:"updated_at" xorm:"updated"`
-  CreatedAt int64 `json:"created_at" xorm:"created"`
+  SubName string `json:"sub_name"`
+  DeletedAt *time.Time `json:"deleted_at"`
+  UpdatedAt time.Time `json:"updated_at"`
+  CreatedAt time.Time `json:"created_at"`
 }
 
 // 获取数据库所有表
 func AuthSetTable(ctx context.Context) {
-  allTable, _ := DB.Engine.DBMetas()
 
-  array :=  []string{}
-  for _,v := range allTable{
-    array = append(array, v.Name)
-    // tabMap[v.Name] = v.ColumnsSeq()
+  type handleTableName struct {
+    TableName string `json:"table_name"`
+    CreateTime time.Time `json:"create_time"`
   }
 
-  data := Utils.NewResData(0, array, ctx)
+  list := make([]handleTableName, 0)
+  sql := "select table_name, create_time from information_schema.tables where table_schema = (select database())"
+  DB.EngineBak.Raw(sql).Scan(&list)
+
+  data := Utils.NewResData(0, list, ctx)
   ctx.JSON(data)
 }
 
@@ -43,29 +47,19 @@ func AuthSetList (ctx context.Context) {
   }
 
   // 获取分页、总数、limit
-  page, count, limit, _ := DB.Limit(ctx)
+  // page, count, _, _ := DB.Limit(ctx)
   list := make([]IdpAuthSet, 0)
 
-  // 获取统计总数
-  var table IdpAuthSet
   data := context.Map{}
 
-  total, err := DB.Engine.Count(&table)
+  sql := "SELECT s.*, (SELECT GROUP_CONCAT(cast(`name` as char(10)) SEPARATOR ',') FROM idp_auth_set where FIND_IN_SET(id, s.sub_id)) as sub_name from idp_auth_set as s order by id desc"
+  DB.EngineBak.Raw(sql).Scan(&list)
 
-  if err != nil {
-    data = Utils.NewResData(1, err.Error(), ctx)
+  if len(list) <= 0 {
+    data = Utils.NewResData(1, "return data is empty.", ctx)
   } else {
-    // 获取列表
-    // err = DB.Engine.Desc("id").Limit(count, limit).Find(&list)
-    err = DB.Engine.Sql("SELECT s.*, (SELECT GROUP_CONCAT(cast(`name` as char(10)) SEPARATOR ',') FROM idp_auth_set where FIND_IN_SET(id, s.sub_id)) as sub_name from idp_auth_set as s").Limit(count, limit).Find(&list)
-
-    // 返回数据
-    if err != nil {
-      data = Utils.NewResData(1, err.Error(), ctx)
-    } else {
-      resData := Utils.TotalData(list, page, total, count)
-      data = Utils.NewResData(0, resData, ctx)
-    }
+    resData := Utils.TotalData(list, 1, int64(len(list)), len(list))
+    data = Utils.NewResData(0, resData, ctx)
   }
 
   ctx.JSON(data)
@@ -82,25 +76,17 @@ func AuthSetDetail (ctx context.Context) {
   }
 
   var table IdpAuthSet
-  ctx.ReadJSON(&table)
 
   id, _ := ctx.Params().GetInt64("id")
   table.Id = id
 
-  has, err := DB.Engine.Omit("sub_name").Get(&table)
-  if err != nil {
-    ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
+  result := DB.EngineBak.Where("id =?", table.Id).First(&table)
+  if result.Error != nil {
+    ctx.JSON(Utils.NewResData(1, "return data is empty.", ctx))
     return
   }
 
-  data := context.Map{}
-  if has == true {
-    data = Utils.NewResData(0, table, ctx)
-  } else {
-    data = Utils.NewResData(1, "记录不存在", ctx)
-  }
-
-  ctx.JSON(data)
+  ctx.JSON(Utils.NewResData(0, table, ctx))
 
 }
 
@@ -119,7 +105,7 @@ func AuthSetPut (ctx context.Context) {
 }
 
 type company struct {
-  IdpAuthSet `xorm:"extends"`
+  IdpAuthSet
   Last_table string `json:"last_table"`
 }
 
@@ -157,47 +143,47 @@ func sumbitAuthSetData(tye int, ctx context.Context) context.Map {
     return Utils.NewResData(1, errMsgs, ctx)
   }
 
-
   // 判断数据库里面是否已经存在
-  var exist IdpAuthSet
-  value := []interface{}{table.IdpAuthSet.Id, table.IdpAuthSet.Name, table.IdpAuthSet.TableName}
-  has, err := DB.Engine.Omit("last_table", "sub_name").Where("id<>? and name=? and table_name=?", value...).Exist(&exist)
-
-  if err != nil {
-    return Utils.NewResData(1, err.Error(), ctx)
-  }
-
-  if has == true {
-    return Utils.NewResData(1, table.IdpAuthSet.Name + "已存在", ctx)
+  // var table1 IdpAuthSet
+  value := []interface{}{table.Id, table.Name}
+  err = DB.EngineBak.Where("id<>? and name = ?", value...).First(&IdpAuthSet{}).Error
+  if err == nil {
+    return Utils.NewResData(1, table.Name + "已存在", ctx)
   }
 
   // 写入数据库
-  tipsText := "添加"
   if tye == 1 {
-    tipsText = "修改"
     // 修改
-    _, err = DB.Engine.Omit("last_table", "sub_name").Id(table.IdpAuthSet.Id).Update(&table)
 
-    if err == nil {
-      ss, err := DB.Engine.Query("SELECT GROUP_CONCAT(cast(`id` as char(10)) SEPARATOR ',') as id  FROM idp_admin_auth WHERE find_in_set(?,sid)", table.IdpAuthSet.Id)
-      if err == nil {
-        aid := string(ss[0]["id"])
-        sql := "update idp_admin_auth set content=replace(content, ?, ?) where id in(?)"
-        _, err = DB.Engine.Exec(sql, table.Last_table, table.IdpAuthSet.TableName, aid)
+    if err := DB.EngineBak.Model(&table).Omit("last_table", "sub_name").Where("id =?", table.IdpAuthSet.Id).Updates(&table).Error; err != nil {
+      return Utils.NewResData(1, "修改失败", ctx)
+    }
+
+    // 判断数据表是否改变
+    if table.Last_table != table.IdpAuthSet.TableName {
+      type Result struct {
+        Id int64
+      }
+      var result Result
+      sql := "SELECT GROUP_CONCAT(cast(`id` as char(10)) SEPARATOR ',') as id  FROM idp_admin_auth WHERE find_in_set(?,sid)"
+      DB.EngineBak.Raw(sql, table.Id).Scan(&result)
+
+      if result.Id > 0 {
+        sql = "update idp_admin_auth set content=replace(content, ?, ?) where id in(?)"
+        DB.EngineBak.Exec(sql, table.Last_table, table.IdpAuthSet.TableName, result.Id)
       }
     }
-  } else {
+
+    return Utils.NewResData(0, "修改成功", ctx)
+  }
+
     // 新增
-    _, err = DB.Engine.Omit("last_table", "sub_name").Insert(&table)
+  if err := DB.EngineBak.Omit("last_table", "sub_name").Create(&table).Error; err != nil {
+    return Utils.NewResData(1, "添加失败", ctx)
   }
 
+  return Utils.NewResData(0, "添加成功", ctx)
 
-
-  if err != nil {
-    return Utils.NewResData(1, err.Error(), ctx)
-  }
-
-  return Utils.NewResData(0, tipsText + "成功", ctx)
 }
 
 // 删除
@@ -219,27 +205,24 @@ func AuthSetDel (ctx context.Context) {
   }
 
   // 判断数据库里面是否已经存在
-  var exist IdpAuthSet
-  has, err := DB.Engine.Where("id=?", table.Id).Exist(&exist)
-
-  if err != nil {
-    ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
-    return
-  }
-
-  if has != true {
+  if err := DB.EngineBak.Where("id=?", table.Id).First(&table).Error; err != nil {
     ctx.JSON(Utils.NewResData(1, "该信息不存在", ctx))
     return
   }
 
-  // 开始删除
-  _, err = DB.Engine.Id(table.Id).Delete(&table)
+  // 判断是否被使用，如果存在的话，不予删除
+  var roleExist IdpAdminAuth
+  if err := DB.EngineBak.Where("sid=?", table.Id).First(&roleExist).Error; err == nil {
+    ctx.JSON(Utils.NewResData(1, "无法删除，用户权限中使用了该值", ctx))
+    return
+  }
 
+  // 开始删除
   data := context.Map{}
-  if err == nil {
-    data = Utils.NewResData(0, "删除成功", ctx)
-  } else {
+  if err := DB.EngineBak.Where("id =?", table.Id).Delete(&table).Error; err != nil {
     data = Utils.NewResData(1, err.Error(), ctx)
+  } else {
+    data = Utils.NewResData(0, "删除成功", ctx)
   }
 
   ctx.JSON(data)
