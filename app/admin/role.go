@@ -183,8 +183,9 @@ func sumbitRoleData(tye int, ctx context.Context) context.Map {
   }
 
   // 判断数据库里面是否已经存在
+  var exist IdpAdminRoles
   value := []interface{}{table.Id, table.Name}
-  if err := DB.EngineBak.Where("id<>? and name=?", value...).First(&table).Error; err == nil {
+  if err := DB.EngineBak.Where("id<>? and name=?", value...).First(&exist).Error; err == nil {
     return Utils.NewResData(1, table.Name + "已存在", ctx)
   }
 
@@ -199,7 +200,10 @@ func sumbitRoleData(tye int, ctx context.Context) context.Map {
   if err := DB.EngineBak.Create(&table).Error; err != nil {
     return Utils.NewResData(1, "添加失败", ctx)
   }
-  return Utils.NewResData(0, "添加成功", ctx)
+
+  return Utils.NewResData(0, context.Map{
+    "rid": table.Id,
+  }, ctx)
 
 }
 

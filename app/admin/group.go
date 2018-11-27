@@ -91,7 +91,6 @@ func GroupDetail (ctx context.Context) {
   }
 
   var table IdpAdminGroup
-
   id, _ := ctx.Params().GetInt64("id")
   table.Id = id
 
@@ -150,12 +149,12 @@ func sumbitGroupData(tye int, ctx context.Context) context.Map {
   }
 
   // 判断数据库里面是否已经存在
+  var exist IdpAdminGroup
   value := []interface{}{table.Id, table.Name}
-  if err := DB.EngineBak.Where("id<>? and name=?", value...).First(&table).Error; err == nil {
+  if err := DB.EngineBak.Where("id<>? and name=?", value...).First(&exist).Error; err == nil {
     return Utils.NewResData(1, table.Name + "已存在", ctx)
   }
 
-  // tipsText := "添加"
   if tye == 1 {
     if err := DB.EngineBak.Model(&table).Where("id =?", table.Id).Updates(&table).Error; err != nil {
       return Utils.NewResData(1, "修改失败", ctx)

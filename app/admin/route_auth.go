@@ -13,7 +13,7 @@ import(
 )
 
 type IdpAdminAuth struct {
-  Id int64 `json:"id"`
+  Id int64 `json:"id" gorm:"primary_key;"`
   Rid int64 `json:"rid"`
   Sid string `json:"sid"`
   Content string `json:"content"`
@@ -24,7 +24,7 @@ type IdpAdminAuth struct {
 }
 
 // 列表
-func AdminAuthList (ctx context.Context) {
+func RouteAuthList (ctx context.Context) {
 
   // 判断权限
   hasAuth, _, code, err := DB.CheckAdminAuth(ctx, "idp_admin_auth")
@@ -55,7 +55,7 @@ func AdminAuthList (ctx context.Context) {
 }
 
 // 详情
-func AdminAuthDetail (ctx context.Context) {
+func RouteAuthDetail (ctx context.Context) {
   // 判断权限
   hasAuth, _, code, err := DB.CheckAdminAuth(ctx, "idp_admin_auth")
   if hasAuth != true {
@@ -64,43 +64,35 @@ func AdminAuthDetail (ctx context.Context) {
   }
 
   var table IdpAdminAuth
-  ctx.ReadJSON(&table)
-
   id, _ := ctx.Params().GetInt64("id")
   table.Id = id
 
-  has, err := DB.Engine.Get(&table)
-  if err != nil {
-    ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
+  result := DB.EngineBak.Where("id =?", table.Id).First(&table)
+
+  if result.Error != nil {
+    ctx.JSON(Utils.NewResData(1, "return data is empty.", ctx))
     return
   }
 
-  data := context.Map{}
-  if has == true {
-    data = Utils.NewResData(0, table, ctx)
-  } else {
-    data = Utils.NewResData(1, "return data is empty.", ctx)
-  }
-
-  ctx.JSON(data)
+  ctx.JSON(Utils.NewResData(0, table, ctx))
 
 }
 
 // 新增
-func AdminAuthAdd (ctx context.Context) {
-  data := sumbitAdminAuthData(0, ctx)
+func RouteAuthAdd (ctx context.Context) {
+  data := sumbitRouteAuthData(0, ctx)
   ctx.JSON(data)
 }
 
 // 修改
-func AdminAuthPut (ctx context.Context) {
-  data := sumbitAdminAuthData(1, ctx)
+func RouteAuthPut (ctx context.Context) {
+  data := sumbitRouteAuthData(1, ctx)
   ctx.JSON(data)
 }
 
 
 // 提交数据 0新增、1修改
-func sumbitAdminAuthData(tye int, ctx context.Context) context.Map {
+func sumbitRouteAuthData(tye int, ctx context.Context) context.Map {
   // 判断权限
   hasAuth, _, code, err := DB.CheckAdminAuth(ctx, "idp_admin_auth")
   if hasAuth != true {
@@ -128,34 +120,25 @@ func sumbitAdminAuthData(tye int, ctx context.Context) context.Map {
   // 判断数据库里面是否已经存在
   var exist IdpAdminAuth
   value := []interface{}{table.Rid}
-  has, err := DB.Engine.Where("rid=?", value...).Exist(&exist)
-
-  if err != nil {
-    return Utils.NewResData(1, err.Error(), ctx)
+  if err := DB.EngineBak.Where("rid =?", value...).First(&exist).Error; err == nil {
+    // return Utils.NewResData(1, "已分配权限", ctx)
+    if err := DB.EngineBak.Model(&table).Where("rid =?", table.Rid).Updates(&table).Error; err != nil {
+      return Utils.NewResData(1, "修改失败", ctx)
+    }
+    return Utils.NewResData(0, "修改成功", ctx)
   }
 
-  if has == true {
-    _, err = DB.Engine.Id(table.Id).Update(&table)
-    // return Utils.NewResData(1, Utils.Int64ToStr(table.Rid) + "已存在", ctx)
-  } else {
-    _, err = DB.Engine.Insert(&table)
+  // 新增
+  if err := DB.EngineBak.Create(&table).Error; err != nil {
+    return Utils.NewResData(1, "添加失败", ctx)
   }
 
-  // 写入数据库
-  tipsText := "添加"
-  if tye == 1 {
-    tipsText = "修改"
-  }
+  return Utils.NewResData(0, "添加成功", ctx)
 
-  if err != nil {
-    return Utils.NewResData(1, err.Error(), ctx)
-  }
-
-  return Utils.NewResData(0, tipsText + "成功", ctx)
 }
 
 // 删除
-func AdminAuthDel (ctx context.Context) {
+func RouteAuthDel (ctx context.Context) {
   // 判断权限
   hasAuth, _, code, err := DB.CheckAdminAuth(ctx, "idp_admin_auth")
   if hasAuth != true {
@@ -173,27 +156,17 @@ func AdminAuthDel (ctx context.Context) {
   }
 
   // 判断数据库里面是否已经存在
-  var exist IdpAdminAuth
-  has, err := DB.Engine.Where("id=?", table.Id).Exist(&exist)
-
-  if err != nil {
-    ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
-    return
-  }
-
-  if has != true {
+  if err := DB.EngineBak.Where("id=?", table.Id).First(&table).Error; err != nil {
     ctx.JSON(Utils.NewResData(1, "该信息不存在", ctx))
     return
   }
 
   // 开始删除
-  _, err = DB.Engine.Id(table.Id).Delete(&table)
-
   data := context.Map{}
-  if err == nil {
-    data = Utils.NewResData(0, "删除成功", ctx)
-  } else {
+  if err := DB.EngineBak.Where("id =?", table.Id).Delete(&table).Error; err != nil {
     data = Utils.NewResData(1, err.Error(), ctx)
+  } else {
+    data = Utils.NewResData(0, "删除成功", ctx)
   }
 
   ctx.JSON(data)

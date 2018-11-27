@@ -145,8 +145,9 @@ func sumbitAuthSetData(tye int, ctx context.Context) context.Map {
 
   // 判断数据库里面是否已经存在
   // var table1 IdpAuthSet
+  var exist IdpAdminRoles
   value := []interface{}{table.Id, table.Name}
-  err = DB.EngineBak.Where("id<>? and name = ?", value...).First(&IdpAuthSet{}).Error
+  err = DB.EngineBak.Where("id<>? and name = ?", value...).First(&exist).Error
   if err == nil {
     return Utils.NewResData(1, table.Name + "已存在", ctx)
   }

@@ -122,11 +122,11 @@ func Init() {
     admin.Delete("/auth/seting", Admin.AuthSetDel)            // 删除权限路由
 
     // 角色权限设置
-    admin.Get("/roleAuth", Admin.AdminAuthList)              // 权限路由列表
-    admin.Get("/roleAuth/{id:int64}", Admin.AdminAuthDetail) // 权限路由详情
-    admin.Post("/roleAuth", Admin.AdminAuthAdd)              // 添加权限路由
-    admin.Put("/roleAuth", Admin.AdminAuthPut)               // 修改权限路由
-    admin.Delete("/roleAuth", Admin.AdminAuthDel)            // 删除权限路由
+    admin.Get("/roleAuth", Admin.RouteAuthList)              // 权限路由列表
+    admin.Get("/roleAuth/{id:int64}", Admin.RouteAuthDetail) // 权限路由详情
+    admin.Post("/roleAuth", Admin.RouteAuthAdd)              // 添加权限路由
+    admin.Put("/roleAuth", Admin.RouteAuthPut)               // 修改权限路由
+    admin.Delete("/roleAuth", Admin.RouteAuthDel)            // 删除权限路由
 
     // sys.Post("/test/sqlopen", AppSyßs.TestOpen)        // 测试数据库连接
     // sys.Get("/database", AppSys.GetDatabase)          // 获取数据库库列表
