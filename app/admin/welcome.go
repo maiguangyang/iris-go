@@ -13,41 +13,12 @@ import(
   DB "../../database"
 )
 
-// type Admins struct {
-//   Id int64 `json:"id"`
-//   Phone string `json:"phone"`
-//   Password string `json:"password"`
-//   Username string `json:"username"`
-//   Sex int64 `json:"sex"`
-//   Super int64 `json:"super"`
-//   Gid string `json:"gid"`
-//   Rid string `json:"rid"`
-//   Aid int64 `json:"aid"`
-//   Money int64 `json:"money" xorm:"default(0)"`
-//   State int64 `json:"state"`
-//   JobState int64 `json:"job_state"`
-//   LoginCount int64 `json:"login_count" xorm:"version"`
-//   LoginTime int64 `json:"login_time"`
-//   LastTime int64 `json:"last_time"`
-//   LoginIp string `json:"login_ip"`
-//   LastIp string `json:"last_ip"`
-//   EntryTime int64 `json:"entry_time"`
-//   QuitTime int64 `json:"quit_time"`
-//   TrialTime int64 `json:"trial_time"`
-//   ContractTime int64 `json:"contract_time"`
-//   DeletedAt int64 `json:"deleted_at"`
-//   UpdatedAt int64 `json:"updated_at" xorm:"updated"`
-//   CreatedAt int64 `json:"created_at" xorm:"created"`
-// }
-
 type IdpAdmins struct {
-  // DB.Model
-  Id int64 `json:"id" gorm:"primary_key"`
+  DB.Model
   Phone string `json:"phone"`
-  Password string `json:"password"`
   Username string `json:"username"`
   Sex int64 `json:"sex"`
-  Super int64 `json:"super"`
+  Super int64 `json:"super" gorm:"default:1"`
   Gid string `json:"gid"`
   Rid string `json:"rid"`
   Aid int64 `json:"aid"`
@@ -55,24 +26,33 @@ type IdpAdmins struct {
   State int64 `json:"state"`
   JobState int64 `json:"job_state"`
   LoginCount int64 `json:"login_count"`
-  LoginTime time.Time `json:"login_time"`
-  LastTime time.Time `json:"last_time"`
+  LoginTime int64 `json:"login_time" gorm:"default:null"`
+  LastTime int64 `json:"last_time" gorm:"default:null"`
   LoginIp string `json:"login_ip"`
   LastIp string `json:"last_ip"`
-  EntryTime time.Time `json:"entry_time"`
-  QuitTime time.Time `json:"quit_time"`
-  TrialTime time.Time `json:"trial_time"`
-  ContractTime time.Time `json:"contract_time"`
-  DeletedAt *time.Time `json:"deleted_at"`
-  UpdatedAt time.Time `json:"updated_at"`
-  CreatedAt time.Time `json:"created_at"`
+  EntryTime int64 `json:"entry_time" gorm:"default:null"`
+  QuitTime int64 `json:"quit_time" gorm:"default:null"`
+  TrialTime int64 `json:"trial_time" gorm:"default:null"`
+  ContractTime int64 `json:"contract_time" gorm:"default:null"`
+
+  // Groups []IdpAdminGroups `json:"groups" gorm:"foreignkey:Id;association_foreignkey:Gid"`
+  // Roles []IdpAdminRoles `json:"roles" gorm:"FOREIGNKEY:Id"`
+}
+
+type IdpAdminsPass struct {
+  IdpAdmins
+  Password string `json:"password"`
+}
+
+func (IdpAdminsPass) TableName() string {
+  return "idp_admins"
 }
 
 // 登陆
 func Login(ctx context.Context) {
 
-  var table IdpAdmins
-  timestamp := time.Now()
+  var table IdpAdminsPass
+  timestamp := time.Now().Unix()
 
   // 根据不同环境返回数据
   err := Utils.ResNodeEnvData(&table, ctx)
@@ -85,7 +65,8 @@ func Login(ctx context.Context) {
 
   data := context.Map{}
 
-  result := DB.EngineBak.Where("phone =? and password =?", table.Phone, table.Password).First(&table)
+
+  result := DB.EngineBak.Model(&table).First(&table, 1)
 
   if result.Error != nil {
     data = Utils.NewResData(1, "请检查账号密码输入是否正确", ctx)
@@ -105,13 +86,12 @@ func Login(ctx context.Context) {
       table.LoginCount = table.LoginCount + 1
       table.LastTime   = table.LoginTime
 
-      table.UpdatedAt  = timestamp
       table.LoginTime  = timestamp
       table.LastIp     = table.LoginIp
       table.LoginIp    = ip
 
       // 更新用户登陆信息
-      result = DB.EngineBak.Model(&table).Updates(&table)
+      result = DB.EngineBak.Model(&table).UpdateColumns(&table)
       if result.Error != nil {
         ctx.JSON(Utils.NewResData(1, result.Error, ctx))
         return
@@ -149,7 +129,8 @@ func GetUserDetail(uid int64, ctx context.Context) context.Map {
   var table IdpAdmins
   // table.Id = uid
 
-  result := DB.EngineBak.Where("id=?", uid).Omit("password").First(&table)
+  result := DB.EngineBak.Model(&table).Where("id=?", uid).Preload("Groups").Preload("Roles").First(&table)
+
   if result.Error != nil {
     return Utils.NewResData(1, result.Error, ctx)
   }
@@ -166,16 +147,26 @@ func HandleAdminRoutes(ctx context.Context) {
     return
   }
 
-  data := context.Map{}
+  data := Utils.NewResData(1, context.Map{}, ctx)
   if !Utils.IsEmpty(reqData["rid"]) {
-    sql := `select auth.id, auth.rid, auth.sid, auth.content, a.table_name, a.id as s_id, a.name, a.routes, a.sub_id, b.id as b_id, b.routes as sub_routes from idp_admin_auth as auth left join idp_auth_set as a ON FIND_IN_SET(a.id, auth.sid) left join idp_auth_set as b ON FIND_IN_SET(b.id, a.sub_id) where auth.rid = ?`
-    rows, err := DB.Engine.QueryString(sql, reqData["rid"])
-
-    if err == nil {
-      data = Utils.NewResData(0, rows, ctx)
-    } else {
-      data = Utils.NewResData(1, "获取前端路由错误", ctx)
+    type dataJson struct {
+      Id int64 `json:"id" gorm:"primary_key"`
+      Rid int64 `json:"rid"`
+      Sids string `json:"sids"`
+      Content string `json:"content"`
+      TableName string `json:"table_name"`
+      Sid string `json:"sid"`
+      Name string `json:"name"`
+      Routes string `json:"routes"`
+      SubId string `json:"sub_id"`
+      Bid string `json:"bid"`
+      SubRoutes string `json:"sub_routes"`
     }
+
+    var list dataJson
+    sql := `select auth.id, auth.rid, auth.sid as sids, auth.content, a.table_name, a.id as sid, a.name, a.routes, a.sub_id, b.id as bid, b.routes as sub_routes from idp_admin_auth as auth left join idp_auth_set as a ON FIND_IN_SET(a.id, auth.sid) left join idp_auth_set as b ON FIND_IN_SET(b.id, a.sub_id) where auth.rid = ?`
+    DB.EngineBak.Raw(sql, reqData["rid"]).Scan(&list)
+    data = Utils.NewResData(0, list, ctx)
   }
 
   ctx.JSON(data)

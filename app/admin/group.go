@@ -1,8 +1,8 @@
 package admin
 
 import (
-  // "fmt"
-  "time"
+  "fmt"
+  // "time"
   // "reflect"
   "github.com/kataras/iris/context"
 
@@ -13,13 +13,10 @@ import (
 
 
 type IdpAdminGroups struct {
-  Id int64 `json:"id" gorm:"primary_key"`
+  DB.Model
   Name string `json:"name"`
   Aid int64 `json:"aid"`
   State int64 `json:"state"`
-  DeletedAt *time.Time `json:"deleted_at"`
-  UpdatedAt time.Time `json:"updated_at"`
-  CreatedAt time.Time `json:"created_at"`
 }
 
 func (IdpAdminGroups) TableName() string {
@@ -45,7 +42,7 @@ func GroupList (ctx context.Context) {
 
   // 获取分页、总数、limit
   page, count, offset, _ := DB.Limit(ctx)
-  list := make([]IdpAdminGroup, 0)
+  lists := make([]IdpAdminGroup, 0)
 
   // 下面开始是查询条件 where
   whereData  := ""
@@ -69,12 +66,25 @@ func GroupList (ctx context.Context) {
   // 查询列表
   data := context.Map{}
   var total int64
-  result := DB.EngineBak.Model(&list).Order("id desc").Where(whereData, whereValue...).Limit(count).Offset(offset).Preload("Roles").Find(&list).Count(&total)
+
+  // 先读出列表
+  result := DB.EngineBak.Model(&lists).Order("id desc").Where(whereData, whereValue...).Count(&total).Limit(count).Offset(offset).Find(&lists)
+
+  // 然后循环列表，关联查询roles表
+  for key, list := range lists {
+    if err := DB.EngineBak.Model(&list).Related(&list.Roles, "Roles").Error; err != nil {
+      fmt.Println(err)
+    }
+
+    lists[key] = list
+  }
+
+  // result = DB.EngineBak.Model(&table).Related(&table.Roles, "Roles")
 
   if result.Error != nil {
     data = Utils.NewResData(1, "return data is empty.", ctx)
   } else {
-    resData := Utils.TotalData(list, page, total, count)
+    resData := Utils.TotalData(lists, page, total, count)
     data = Utils.NewResData(0, resData, ctx)
   }
 
@@ -94,8 +104,8 @@ func GroupDetail (ctx context.Context) {
   id, _ := ctx.Params().GetInt64("id")
   table.Id = id
 
-  result := DB.EngineBak.Model(&table).Where("id =?", table.Id).Preload("Roles").First(&table)
-  // result := DB.EngineBak.Model(&list).Order("id desc").Where("id =?", table.Id).Preload("Roles").First(&list)
+  result := DB.EngineBak.First(&table)
+  result = DB.EngineBak.Model(&table).Order("id desc").Related(&table.Roles, "Roles")
 
   if result.Error != nil {
     ctx.JSON(Utils.NewResData(1, "return data is empty.", ctx))
@@ -143,7 +153,7 @@ func sumbitGroupData(tye int, ctx context.Context) context.Map {
     },
   }
 
-  errMsgs := rules.Validate(Utils.StructToMap(table.IdpAdminGroups))
+  errMsgs := rules.Validate(Utils.StructToMap(table))
   if errMsgs != nil {
     return Utils.NewResData(1, errMsgs, ctx)
   }

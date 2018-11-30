@@ -2,7 +2,7 @@ package admin
 
 import (
   // "fmt"
-  "time"
+  // "time"
   // "reflect"
   // "encoding/json"
   "github.com/kataras/iris/context"
@@ -15,14 +15,15 @@ import (
 
 
 type IdpAdminRoles struct {
-  Id int64 `json:"id" gorm:"primary_key"`
+  DB.Model
+  // Id int64 `json:"id" gorm:"primary_key"`
   Name string `json:"name"`
   Gid int64 `json:"gid"`
   Aid int64 `json:"aid"`
   State int64 `json:"state"`
-  DeletedAt *time.Time `json:"deleted_at"`
-  UpdatedAt time.Time `json:"updated_at"`
-  CreatedAt time.Time `json:"created_at"`
+  // DeletedAt *time.Time `json:"deleted_at"`
+  // UpdatedAt time.Time `json:"updated_at"`
+  // CreatedAt time.Time `json:"created_at"`
 
 }
 

@@ -1,7 +1,7 @@
 package admin
 
 import (
-  // "fmt"
+  "fmt"
   // "reflect"
   "github.com/kataras/iris/context"
 
@@ -21,7 +21,7 @@ func UserList (ctx context.Context) {
   }
 
   // 获取分页、总数、limit
-  page, count, limit, filters := DB.Limit(ctx)
+  page, count, offset, filters := DB.Limit(ctx)
   list := make([]IdpAdmins, 0)
 
   // 下面开始是查询条件 where
@@ -93,29 +93,42 @@ func UserList (ctx context.Context) {
   }
   // 查询条件结束
 
-  // 获取统计总数
-  var table IdpAdmins
+  // 查询列表
   data := context.Map{}
-  total, err := DB.Engine.Desc("id").Where(whereData, whereValue...).Count(&table)
-
-  if err != nil {
-    data = Utils.NewResData(1, err.Error(), ctx)
+  var total int64
+  result := DB.EngineBak.Model(&list).Order("id desc").Where(whereData, whereValue...).Limit(count).Offset(offset).Preload("Groups").Preload("Roles").Find(&list).Count(&total)
+  if result.Error != nil {
+    data = Utils.NewResData(1, "return data is empty.", ctx)
   } else {
-    // 获取列表
-    err = DB.Engine.Omit("password").Desc("idp_admins.id").Where(whereData, whereValue...).Limit(count, limit).Find(&list)
-    // // err = DB.Engine.Sql("SELECT GROUP_CONCAT(cast(`name` as char(10)) SEPARATOR ',') as `group` from idp_admins_group where idp_admins_group.id = idp_admins.id ").Where(whereData, whereValue...).Limit(count, limit).Find(&list)
-    // err = DB.Engine.Omit("password").Sql("select idp_admins.*, (SELECT GROUP_CONCAT(cast(`name` as char(10)) SEPARATOR ',') from idp_admins_group where FIND_IN_SET(id, idp_admins.gid)) as `group` from idp_admins").Limit(count, limit).Find(&list)
-
-    // 返回数据
-    if err != nil {
-      data = Utils.NewResData(1, err.Error(), ctx)
-    } else {
-      resData := Utils.TotalData(list, page, total, count)
-      data = Utils.NewResData(0, resData, ctx)
-    }
+    resData := Utils.TotalData(list, page, total, count)
+    data = Utils.NewResData(0, resData, ctx)
   }
 
   ctx.JSON(data)
+
+  // // 获取统计总数
+  // var table IdpAdmins
+  // data := context.Map{}
+  // total, err := DB.Engine.Desc("id").Where(whereData, whereValue...).Count(&table)
+
+  // if err != nil {
+  //   data = Utils.NewResData(1, err.Error(), ctx)
+  // } else {
+  //   // 获取列表
+  //   err = DB.Engine.Omit("password").Desc("idp_admins.id").Where(whereData, whereValue...).Limit(count, limit).Find(&list)
+  //   // // err = DB.Engine.Sql("SELECT GROUP_CONCAT(cast(`name` as char(10)) SEPARATOR ',') as `group` from idp_admins_group where idp_admins_group.id = idp_admins.id ").Where(whereData, whereValue...).Limit(count, limit).Find(&list)
+  //   // err = DB.Engine.Omit("password").Sql("select idp_admins.*, (SELECT GROUP_CONCAT(cast(`name` as char(10)) SEPARATOR ',') from idp_admins_group where FIND_IN_SET(id, idp_admins.gid)) as `group` from idp_admins").Limit(count, limit).Find(&list)
+
+  //   // 返回数据
+  //   if err != nil {
+  //     data = Utils.NewResData(1, err.Error(), ctx)
+  //   } else {
+  //     resData := Utils.TotalData(list, page, total, count)
+  //     data = Utils.NewResData(0, resData, ctx)
+  //   }
+  // }
+
+  // ctx.JSON(data)
 
 }
 
@@ -158,14 +171,14 @@ func sumbitUserData(tye int, ctx context.Context) context.Map {
     return Utils.NewResData(code, err.Error(), ctx)
   }
 
-  var table IdpAdmins
-
-
+  var table IdpAdminsPass
+  fmt.Println(&table)
   // 根据不同环境返回数据
   err = Utils.ResNodeEnvData(&table, ctx)
   if err != nil {
     return Utils.NewResData(1, err.Error(), ctx)
   }
+
 
   // 验证参数
   var rules Utils.Rules
@@ -211,8 +224,9 @@ func sumbitUserData(tye int, ctx context.Context) context.Map {
 
 
   // 看看是否修改密码
-  var isUser IdpAdmins
-  has, err := DB.Engine.Cols("password").Where("id=?", userData.Id).Get(&isUser)
+  var isUser IdpAdminsPass
+  // has, err := DB.Engine.Cols("password").Where("id=?", userData.Id).Get(&isUser)
+  DB.EngineBak.Where("id=?", userData.Id).First(&isUser)
 
   if Utils.IsEmpty(table.Password) {
     table.Password = isUser.Password
@@ -220,45 +234,31 @@ func sumbitUserData(tye int, ctx context.Context) context.Map {
     table.Password = Public.EncryptPassword(table.Password)
   }
 
-
   // 判断数据库里面是否已经存在
   var exist IdpAdmins
-  value := []interface{}{userData.Id, userData.Phone}
-  has, err = DB.Engine.Where("id<>? and phone=?", value...).Exist(&exist)
+  if tye == 1 {
+    if err := DB.EngineBak.Where("id<>? and phone=?", userData.Id, table.Phone).First(&exist).Error; err == nil {
+      return Utils.NewResData(1, table.Phone + "已存在", ctx)
+    }
 
-  if err != nil {
-    return Utils.NewResData(1, err.Error(), ctx)
+    if err := DB.EngineBak.Model(&table).Where("id =?", table.Id).Updates(&table).Error; err != nil {
+      return Utils.NewResData(1, "修改失败", ctx)
+    }
+    return Utils.NewResData(0, "修改成功", ctx)
   }
 
-  if has == true {
+  if err := DB.EngineBak.Where("phone=?", table.Phone).First(&exist).Error; err == nil {
     return Utils.NewResData(1, table.Phone + "已存在", ctx)
   }
-
-
-  // 写入数据库
-  tipsText := "添加"
-  if tye == 1 {
-    tipsText = "修改"
-    // 修改
-    _, err = DB.Engine.Id(table.Id).Update(&table)
-  } else {
     // 新增
-    _, err = DB.Engine.Insert(&table)
+  if err := DB.EngineBak.Create(&table).Error; err != nil {
+    return Utils.NewResData(1, "添加失败", ctx)
   }
 
+  return Utils.NewResData(0, context.Map{
+    "uid": table.Id,
+  }, ctx)
 
-  if err != nil {
-    return Utils.NewResData(1, err.Error(), ctx)
-  }
-
-  // 新增返回并
-  if tye == 0 {
-    return Utils.NewResData(0, context.Map{
-      "uid": table.Id,
-    }, ctx)
-  }
-
-  return Utils.NewResData(0, tipsText + "成功", ctx)
 }
 
 // 删除
@@ -279,28 +279,19 @@ func UserDel (ctx context.Context) {
     return
   }
 
+
   // 判断数据库里面是否已经存在
-  var exist IdpAdmins
-  has, err := DB.Engine.Where("id=?", table.Id).Exist(&exist)
-
-  if err != nil {
-    ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
-    return
-  }
-
-  if has != true {
+  if err := DB.EngineBak.Where("id=?", table.Id).First(&table).Error; err != nil {
     ctx.JSON(Utils.NewResData(1, "该信息不存在", ctx))
     return
   }
 
   // 开始删除
-  _, err = DB.Engine.Id(table.Id).Delete(&table)
-
   data := context.Map{}
-  if err == nil {
-    data = Utils.NewResData(0, "删除成功", ctx)
-  } else {
+  if err := DB.EngineBak.Where("id =?", table.Id).Delete(&table).Error; err != nil {
     data = Utils.NewResData(1, err.Error(), ctx)
+  } else {
+    data = Utils.NewResData(0, "删除成功", ctx)
   }
 
 

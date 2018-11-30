@@ -3,7 +3,7 @@ package database
 import (
   "fmt"
   // "reflect"
-  // "database/sql"
+  "database/sql"
   // "strings"
   "time"
   "errors"
@@ -22,7 +22,36 @@ import (
 var Engine *xorm.Engine
 var EngineBak *gorm.DB
 
-type Model gorm.Model
+type NullInt64 = *sql.NullInt64
+
+type Model struct {
+  Id int64 `json:"id" gorm:"primary_key"`
+  // ID        int64
+  CreatedAt NullInt64 `json:"created_at" gorm:"type:int(11);null;"default:null"`
+  UpdatedAt NullInt64 `json:"updated_at" gorm:"type:int(11);null;default:null"`
+  DeletedAt NullInt64 `json:"deleted_at" gorm:"type:int(11);null;"default:null"`
+}
+
+// func (Model) BeforeCreate(scope *gorm.Scope) error {
+//   scope.SetColumn("CreatedAt", time.Now().Unix())
+//   return nil
+// }
+
+// func (m *Model) BeforeUpdate(scope *gorm.Scope) error {
+
+//   scope.SetColumn("UpdatedAt", time.Now().Unix())
+//   return nil
+// }
+
+// func (m *Model) BeforeDelete(scope *gorm.Scope) error {
+//   fmt.Println(m.DeletedAt)
+//   scope.SetColumn("DeletedAt", time.Now().Unix())
+//   return nil
+// }
+
+// func (m *Model) AfterFind() (err error) {
+//   return nil
+// }
 
 
 // 连接
@@ -30,6 +59,8 @@ func OpenSql() error {
   dataSourceName := "root:123456@tcp(192.168.1.235:3306)/idongpin?charset=utf8mb4&parseTime=True&loc=Local"
 
   var err error
+
+  fmt.Println(time.Now())
 
   // 接连数据库，已经连接上，要手动断开连接
   if Engine != nil && Engine.Ping() == nil {
@@ -67,6 +98,10 @@ func OpenSql() error {
   //   return "idp_" + defaultTableName;
   // }
 
+  // 加载G重写后的orm插件
+  Public.InitGorm(EngineBak)
+
+  EngineBak.LogMode(true)
   EngineBak.SingularTable(true)
   EngineBak.DB().SetMaxIdleConns(2000)
   EngineBak.DB().SetMaxOpenConns(10000)
@@ -80,7 +115,7 @@ func OpenSql() error {
 func HasInitTable() {
   // 用户组
   type IdpAdminGroup struct {
-    gorm.Model
+    Model
     Name string
     Aid int64
   }
@@ -97,7 +132,7 @@ func HasInitTable() {
 
   // 角色表
   type IdpAdminRole struct {
-    gorm.Model
+    Model
     Name string
     Gid int64
     Aid int64
@@ -116,13 +151,14 @@ func HasInitTable() {
 
   // 人员表
   type IdpAdmins struct {
-    gorm.Model
+    Model
     Phone string
     Password string
     Username string
     Gid int64
     Rid int64
     Aid int64
+    JobState int64
     Super int64
   }
 
@@ -133,6 +169,7 @@ func HasInitTable() {
   admin.Gid      = 1
   admin.Rid      = 1
   admin.Aid      = 1
+  admin.JobState = 2
   admin.Super    = 2
 
   has = EngineBak.HasTable(&IdpAdmins{})
@@ -156,7 +193,7 @@ func HasInitTable() {
 
   // 权限表
   type IdpAdminAuth struct {
-    gorm.Model
+    Model
     Rid int64
     Sid string
     Content string
@@ -186,9 +223,9 @@ func CheckAdminAuth(ctx context.Context, table string) (bool, bool, int, error) 
     Sid string `json:"sid"`
     Content string `json:"content"`
     Auth int64 `json:"auth"`
-    DeletedAt *time.Time `json:"deleted_at"`
-    UpdatedAt time.Time `json:"updated_at"`
-    CreatedAt time.Time `json:"created_at"`
+    DeletedTime int64 `json:"deleted_time"`
+    UpdatedTime int64 `json:"updated_time"`
+    CreatedTime int64 `json:"created_time"`
   }
 
   // 获取服务端用户信息

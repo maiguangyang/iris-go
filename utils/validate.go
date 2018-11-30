@@ -17,12 +17,37 @@ func StructToMap(obj interface{}) map[string]interface{} {
 
   var data = make(map[string]interface{})
   for i := 0; i < t.NumField(); i++ {
-    data[t.Field(i).Name] = v.Field(i).Interface()
+    value := v.Field(i).Interface()
+
+    // if v.Field(i).Type().Kind() == reflect.Struct{
+    //   t1 := reflect.TypeOf(value)
+    //   v1 := reflect.ValueOf(value)
+
+    //   for j :=0 ; j< t1.NumField(); j++ {
+    //     data[t1.Field(j).Name] = v1.Field(j).Interface()
+    //   }
+    // }
+    data[t.Field(i).Name] = value
   }
+
   return data
 }
 
-func (rs Rules) Validate(d context.Map) interface{} {
+func (rs Rules) Validate(data context.Map) interface{} {
+  d := context.Map{}
+
+  for k, v := range data {
+    t1 := reflect.TypeOf(v)
+    v1 := reflect.ValueOf(v)
+    if v1.Type().Kind() == reflect.Struct {
+
+      for j :=0 ; j< t1.NumField(); j++ {
+        d[t1.Field(j).Name] = v1.Field(j).Interface()
+      }
+    } else {
+      d[k] = v
+    }
+  }
 
   var errMsgs []context.Map
 
