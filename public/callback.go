@@ -72,9 +72,6 @@ func deleteCallback(scope *gorm.Scope) {
 }
 
 func InitGorm(db *gorm.DB) {
-  db.Callback().Create().Remove("gorm:update_time_stamp")
-  db.Callback().Update().Remove("gorm:update_time_stamp")
-  // db.Callback().Update().Replace("gorm:update_time_stamp", updateCallback)
   db.Callback().Create().Replace("gorm:update_time_stamp", updateTimeStampForCreateCallback)
   db.Callback().Update().Replace("gorm:update_time_stamp", updateTimeStampForUpdateCallback)
   db.Callback().Delete().Replace("gorm:delete", deleteCallback)
