@@ -64,6 +64,9 @@ func GroupList (ctx context.Context) {
       whereValue = append(whereValue, state)
     }
   } else {
+    whereData = DB.IsWhereEmpty(whereData, `id <> ?`)
+    whereValue = append(whereValue, 1)
+
     whereData = DB.IsWhereEmpty(whereData, "state =?")
     whereValue = append(whereValue, 1)
   }

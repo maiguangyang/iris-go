@@ -69,9 +69,7 @@ func Login(ctx context.Context) {
   data := context.Map{}
 
 
-  result := DB.Engine.Model(&table).First(&table, 1)
-
-  if result.Error != nil {
+  if err := DB.Engine.Where("phone =? and password =?", table.Phone, table.Password).First(&table).Error; err != nil {
     data = Utils.NewResData(1, "请检查账号密码输入是否正确", ctx)
   } else {
     if table.State == 2 {
@@ -94,13 +92,12 @@ func Login(ctx context.Context) {
       table.LoginIp    = ip
 
       // 更新用户登陆信息
-      result = DB.Engine.Model(&table).UpdateColumns(&table)
-      if result.Error != nil {
-        ctx.JSON(Utils.NewResData(1, result.Error, ctx))
-        return
+      if err := DB.Engine.Model(&table).UpdateColumns(&table).Error; err != nil {
+        data = Utils.NewResData(1, err, ctx)
+      } else {
+        data = Utils.NewResData(0, token, ctx)
       }
 
-      data = Utils.NewResData(0, token, ctx)
     }
   }
 
@@ -123,7 +120,7 @@ func Detail (ctx context.Context) {
 
   res := GetUserDetail(id, ctx)
 
-  ctx.JSON(res)
+  ctx.JSON(Utils.NewResData(0, res["data"], ctx))
 }
 
 // 获取用户信息方法
@@ -147,7 +144,10 @@ func GetUserDetail(uid int64, ctx context.Context) context.Map {
     table.Roles  = rList
   }
 
-  return Utils.NewResData(0, table, ctx)
+  // return Utils.NewResData(0, table, ctx)
+  return context.Map{
+    "data": table,
+  }
 }
 
 // 获取用户的前端路由
@@ -159,8 +159,12 @@ func HandleAdminRoutes(ctx context.Context) {
     return
   }
 
+  id := int64(reqData["id"].(float64))
+  res := GetUserDetail(id, ctx)
+  userData := res["data"].(IdpAdmins)
+
   data := Utils.NewResData(1, context.Map{}, ctx)
-  if !Utils.IsEmpty(reqData["rid"]) {
+  if !Utils.IsEmpty(userData.Rid) {
     type dataJson struct {
       Id int64 `json:"id" gorm:"primary_key"`
       Rid int64 `json:"rid"`
@@ -174,13 +178,13 @@ func HandleAdminRoutes(ctx context.Context) {
       Bid string `json:"bid"`
       SubRoutes string `json:"sub_routes"`
     }
-
-    var list dataJson
-    sql := `select auth.id, auth.rid, auth.sid as sids, auth.content, a.table_name, a.id as sid, a.name, a.routes, a.sub_id, b.id as bid, b.routes as sub_routes from idp_admin_auth as auth left join idp_auth_set as a ON FIND_IN_SET(a.id, auth.sid) left join idp_auth_set as b ON FIND_IN_SET(b.id, a.sub_id) where auth.rid = ?`
-    if err := DB.Engine.Raw(sql, reqData["rid"]).Scan(&list).Error; err != nil {
+    // var list dataJson
+    lists := make([]dataJson, 0)
+    sql := `select auth.id, auth.rid, auth.sid as sids, auth.content, a.table_name, a.id as sid, a.name, a.routes, a.sub_id, b.id as bid, b.routes as sub_routes from idp_admin_auth as auth left join idp_auth_set as a ON FIND_IN_SET(a.id, auth.sid) left join idp_auth_set as b ON FIND_IN_SET(b.id, a.sub_id) where auth.rid in(?)`
+    if err := DB.Engine.Raw(sql, Utils.StrToArr(userData.Rid, ",")).Scan(&lists).Error; err != nil {
       data = Utils.NewResData(1, err, ctx)
     } else {
-      data = Utils.NewResData(0, list, ctx)
+      data = Utils.NewResData(0, lists, ctx)
     }
   }
 

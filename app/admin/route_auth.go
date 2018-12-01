@@ -103,8 +103,10 @@ func sumbitRouteAuthData(tye int, ctx context.Context) context.Map {
     return Utils.NewResData(1, err.Error(), ctx)
   }
 
-  if Utils.StrToInt64(reqData["rid"].(string)) == table.Rid {
-    return Utils.NewResData(1, "登陆账户属于该角色，无法修改权限", ctx)
+  arr := Utils.StrToArr(reqData["rid"].(string), ",")
+  index := Utils.IndexOf(Utils.ArrStrTointerface(arr), Utils.Int64ToStr(table.Rid))
+  if index != -1 {
+    return Utils.NewResData(1, "登陆账户属于该职位，无法修改", ctx)
   }
 
   // 判断数据库里面是否已经存在

@@ -144,7 +144,8 @@ func UserDetail(ctx context.Context) {
   }
 
   res := GetUserDetail(uid, ctx)
-  ctx.JSON(res)
+  ctx.JSON(Utils.NewResData(0, res, ctx))
+  // ctx.JSON(res)
 }
 
 // 新增

@@ -41,13 +41,15 @@ func SetField(obj interface{}, name string, value interface{}) error {
 // map 映射 struct
 func FillStruct(s interface{}, m map[string]interface{}) error {
   for k, v := range m {
-    if reflect.TypeOf(v).String() == "float64" {
-      v = int64(v.(float64))
-    }
+    if v != nil {
+      if reflect.TypeOf(v).String() == "float64" {
+        v = int64(v.(float64))
+      }
 
-    err := SetField(s, CamelString(k), v)
-    if err != nil {
-      return err
+      err := SetField(s, CamelString(k), v)
+      if err != nil {
+        return err
+      }
     }
   }
   return nil

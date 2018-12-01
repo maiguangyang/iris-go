@@ -1,9 +1,11 @@
 package utils
 
 import(
+  // "fmt"
   "strings"
-
+  // "reflect"
 )
+
 func IsEmpty(v interface{}) bool {
   if v == nil {
     return true
@@ -31,6 +33,14 @@ func IndexOf(str []interface{}, data interface{}) int {
   return - 1
 }
 
+// []StringTo[]interface
+func ArrStrTointerface(data []string) []interface{} {
+  newArr := make([]interface{}, len(data))
+  for i, v := range data {
+    newArr[i] = v
+  }
+  return newArr
+}
 
 // stringToArray
 func StrToArr(data, split string) []string {
