@@ -96,39 +96,14 @@ func UserList (ctx context.Context) {
   // 查询列表
   data := context.Map{}
   var total int64
-  result := DB.EngineBak.Model(&list).Order("id desc").Where(whereData, whereValue...).Limit(count).Offset(offset).Preload("Groups").Preload("Roles").Find(&list).Count(&total)
-  if result.Error != nil {
-    data = Utils.NewResData(1, "return data is empty.", ctx)
+  if err := DB.EngineBak.Model(&list).Order("id desc").Where(whereData, whereValue...).Count(&total).Limit(count).Offset(offset).Find(&list).Error; err != nil {
+    data = Utils.NewResData(1, err, ctx)
   } else {
     resData := Utils.TotalData(list, page, total, count)
     data = Utils.NewResData(0, resData, ctx)
   }
 
   ctx.JSON(data)
-
-  // // 获取统计总数
-  // var table IdpAdmins
-  // data := context.Map{}
-  // total, err := DB.Engine.Desc("id").Where(whereData, whereValue...).Count(&table)
-
-  // if err != nil {
-  //   data = Utils.NewResData(1, err.Error(), ctx)
-  // } else {
-  //   // 获取列表
-  //   err = DB.Engine.Omit("password").Desc("idp_admins.id").Where(whereData, whereValue...).Limit(count, limit).Find(&list)
-  //   // // err = DB.Engine.Sql("SELECT GROUP_CONCAT(cast(`name` as char(10)) SEPARATOR ',') as `group` from idp_admins_group where idp_admins_group.id = idp_admins.id ").Where(whereData, whereValue...).Limit(count, limit).Find(&list)
-  //   // err = DB.Engine.Omit("password").Sql("select idp_admins.*, (SELECT GROUP_CONCAT(cast(`name` as char(10)) SEPARATOR ',') from idp_admins_group where FIND_IN_SET(id, idp_admins.gid)) as `group` from idp_admins").Limit(count, limit).Find(&list)
-
-  //   // 返回数据
-  //   if err != nil {
-  //     data = Utils.NewResData(1, err.Error(), ctx)
-  //   } else {
-  //     resData := Utils.TotalData(list, page, total, count)
-  //     data = Utils.NewResData(0, resData, ctx)
-  //   }
-  // }
-
-  // ctx.JSON(data)
 
 }
 
@@ -289,7 +264,7 @@ func UserDel (ctx context.Context) {
   // 开始删除
   data := context.Map{}
   if err := DB.EngineBak.Where("id =?", table.Id).Delete(&table).Error; err != nil {
-    data = Utils.NewResData(1, err.Error(), ctx)
+    data = Utils.NewResData(1, err, ctx)
   } else {
     data = Utils.NewResData(0, "删除成功", ctx)
   }

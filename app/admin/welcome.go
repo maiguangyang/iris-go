@@ -129,10 +129,8 @@ func GetUserDetail(uid int64, ctx context.Context) context.Map {
   var table IdpAdmins
   // table.Id = uid
 
-  result := DB.EngineBak.Model(&table).Where("id=?", uid).Preload("Groups").Preload("Roles").First(&table)
-
-  if result.Error != nil {
-    return Utils.NewResData(1, result.Error, ctx)
+  if err := DB.EngineBak.Model(&table).Where("id=?", uid).First(&table).Error; err != nil {
+    return Utils.NewResData(1, err, ctx)
   }
 
   return Utils.NewResData(0, table, ctx)
@@ -165,8 +163,11 @@ func HandleAdminRoutes(ctx context.Context) {
 
     var list dataJson
     sql := `select auth.id, auth.rid, auth.sid as sids, auth.content, a.table_name, a.id as sid, a.name, a.routes, a.sub_id, b.id as bid, b.routes as sub_routes from idp_admin_auth as auth left join idp_auth_set as a ON FIND_IN_SET(a.id, auth.sid) left join idp_auth_set as b ON FIND_IN_SET(b.id, a.sub_id) where auth.rid = ?`
-    DB.EngineBak.Raw(sql, reqData["rid"]).Scan(&list)
-    data = Utils.NewResData(0, list, ctx)
+    if err := DB.EngineBak.Raw(sql, reqData["rid"]).Scan(&list).Error; err != nil {
+      data = Utils.NewResData(1, err, ctx)
+    } else {
+      data = Utils.NewResData(0, list, ctx)
+    }
   }
 
   ctx.JSON(data)

@@ -68,22 +68,16 @@ func GroupList (ctx context.Context) {
   var total int64
 
   // 先读出列表
-  result := DB.EngineBak.Model(&lists).Order("id desc").Where(whereData, whereValue...).Count(&total).Limit(count).Offset(offset).Find(&lists)
-
-  // 然后循环列表，关联查询roles表
-  for key, list := range lists {
-    if err := DB.EngineBak.Model(&list).Related(&list.Roles, "Roles").Error; err != nil {
-      fmt.Println(err)
-    }
-
-    lists[key] = list
-  }
-
-  // result = DB.EngineBak.Model(&table).Related(&table.Roles, "Roles")
-
-  if result.Error != nil {
-    data = Utils.NewResData(1, "return data is empty.", ctx)
+  if err := DB.EngineBak.Model(&lists).Order("id desc").Where(whereData, whereValue...).Count(&total).Limit(count).Offset(offset).Find(&lists).Error; err != nil {
+    data = Utils.NewResData(1, err, ctx)
   } else {
+    // 然后循环列表，关联查询roles表
+    for key, list := range lists {
+      if err := DB.EngineBak.Model(&list).Related(&list.Roles, "Roles").Error; err != nil {
+        fmt.Println(err)
+      }
+      lists[key] = list
+    }
     resData := Utils.TotalData(lists, page, total, count)
     data = Utils.NewResData(0, resData, ctx)
   }
@@ -100,20 +94,22 @@ func GroupDetail (ctx context.Context) {
     return
   }
 
+  data := context.Map{}
+
   var table IdpAdminGroup
   id, _ := ctx.Params().GetInt64("id")
   table.Id = id
 
-  result := DB.EngineBak.First(&table)
-  result = DB.EngineBak.Model(&table).Order("id desc").Related(&table.Roles, "Roles")
-
-  if result.Error != nil {
-    ctx.JSON(Utils.NewResData(1, "return data is empty.", ctx))
-    return
+  if err := DB.EngineBak.First(&table).Error; err != nil {
+    data = Utils.NewResData(1, err, ctx)
+  } else {
+    if err := DB.EngineBak.Model(&table).Order("id desc").Related(&table.Roles, "Roles").Error; err != nil {
+      data = Utils.NewResData(1, err, ctx)
+    } else {
+      data = Utils.NewResData(0, table, ctx)
+    }
   }
-
-  ctx.JSON(Utils.NewResData(0, table, ctx))
-
+  ctx.JSON(data)
 }
 
 // 新增
@@ -212,7 +208,7 @@ func GroupDel (ctx context.Context) {
   // 开始删除
   data := context.Map{}
   if err := DB.EngineBak.Where("id =?", table.Id).Delete(&table).Error; err != nil {
-    data = Utils.NewResData(1, err.Error(), ctx)
+    data = Utils.NewResData(1, err, ctx)
   } else {
     data = Utils.NewResData(0, "删除成功", ctx)
   }

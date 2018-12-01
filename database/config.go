@@ -121,7 +121,7 @@ func HasInitTable() {
   }
 
   var group IdpAdminGroup
-  group.Name      = "超级管理员"
+  group.Name      = "董事会"
   group.Aid       = 1
 
   has := EngineBak.HasTable(&IdpAdminGroup{})
@@ -139,7 +139,7 @@ func HasInitTable() {
   }
 
   var role IdpAdminRole
-  role.Name = "超级管理员"
+  role.Name = "董事"
   role.Gid  = 1
   role.Aid  = 1
 

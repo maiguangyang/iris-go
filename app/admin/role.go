@@ -16,15 +16,10 @@ import (
 
 type IdpAdminRoles struct {
   DB.Model
-  // Id int64 `json:"id" gorm:"primary_key"`
   Name string `json:"name"`
   Gid int64 `json:"gid"`
   Aid int64 `json:"aid"`
   State int64 `json:"state"`
-  // DeletedAt *time.Time `json:"deleted_at"`
-  // UpdatedAt time.Time `json:"updated_at"`
-  // CreatedAt time.Time `json:"created_at"`
-
 }
 
 func (IdpAdminRoles) TableName() string {
@@ -34,7 +29,7 @@ func (IdpAdminRoles) TableName() string {
 type IdpAdminRole struct {
   IdpAdminRoles
   Group IdpAdminGroups `json:"group" gorm:"foreignkey:Gid"`
-  Auth []IdpAdminAuth `json:"auth" gorm:"foreignkey:Rid"`
+  Auth IdpAdminAuth `json:"auth" gorm:"foreignkey:Rid"`
 }
 
 // 角色列表
@@ -49,7 +44,7 @@ func RoleList (ctx context.Context) {
   // 获取分页、总数、limit
   // page, count, limit, filters := DB.Limit(ctx)
   page, count, offset, filters := DB.Limit(ctx)
-  list := make([]IdpAdminRole, 0)
+  lists := make([]IdpAdminRole, 0)
 
   // 下面开始是查询条件 where
   whereData  := ""
@@ -98,14 +93,32 @@ func RoleList (ctx context.Context) {
   // 查询列表
   data := context.Map{}
   var total int64
-  result := DB.EngineBak.Model(&list).Order("id desc").Where(whereData, whereValue...).Limit(count).Offset(offset).Preload("Group").Preload("Auth").Find(&list).Count(&total)
-
-  if result.Error != nil {
+  // result := DB.EngineBak.Model(&lists).Order("id desc").Where(whereData, whereValue...).Limit(count).Offset(offset).Preload("Group").Preload("Auth").Find(&lists).Count(&total)
+  if err := DB.EngineBak.Model(&lists).Order("id desc").Where(whereData, whereValue...).Count(&total).Limit(count).Offset(offset).Find(&lists).Error; err != nil {
     data = Utils.NewResData(1, "return data is empty.", ctx)
   } else {
-    resData := Utils.TotalData(list, page, total, count)
+    // 然后循环列表，关联查询roles表
+    for key, list := range lists {
+      if err := DB.EngineBak.Model(&list).Related(&list.Group, "Group").Error; err == nil {
+        lists[key] = list
+      }
+
+      if err := DB.EngineBak.Model(&list).Related(&list.Auth, "Auth").Error; err == nil {
+        lists[key] = list
+      }
+    }
+
+    resData := Utils.TotalData(lists, page, total, count)
     data = Utils.NewResData(0, resData, ctx)
   }
+
+
+  // if result.Error != nil {
+  //   data = Utils.NewResData(1, "return data is empty.", ctx)
+  // } else {
+  //   resData := Utils.TotalData(lists, page, total, count)
+  //   data = Utils.NewResData(0, resData, ctx)
+  // }
 
   ctx.JSON(data)
 
@@ -120,20 +133,23 @@ func RoleDetail (ctx context.Context) {
     return
   }
 
-  var table IdpAdminRole
-  ctx.ReadJSON(&table)
+  data := context.Map{}
 
+  var table IdpAdminRole
   id, _ := ctx.Params().GetInt64("id")
   table.Id = id
 
-  result := DB.EngineBak.Model(&table).Where("id =?", table.Id).Preload("Group").Preload("Auth").First(&table)
-  if result.Error != nil {
-    ctx.JSON(Utils.NewResData(1, "return data is empty.", ctx))
-    return
+  if err := DB.EngineBak.First(&table).Error; err != nil {
+    data = Utils.NewResData(1, err, ctx)
+  } else {
+    if err := DB.EngineBak.Model(&table).Order("id desc").Related(&table.Group, "Group").Related(&table.Auth, "Auth").Error; err != nil {
+      data = Utils.NewResData(1, err, ctx)
+    } else {
+      data = Utils.NewResData(0, table, ctx)
+    }
   }
 
-  ctx.JSON(Utils.NewResData(0, table, ctx))
-
+  ctx.JSON(data)
 }
 
 // 新增
@@ -242,7 +258,7 @@ func RoleDel (ctx context.Context) {
   // 开始删除
   data := context.Map{}
   if err := DB.EngineBak.Where("id =?", table.Id).Delete(&table).Error; err != nil {
-    data = Utils.NewResData(1, err.Error(), ctx)
+    data = Utils.NewResData(1, err, ctx)
   } else {
     data = Utils.NewResData(0, "删除成功", ctx)
   }

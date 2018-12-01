@@ -10,15 +10,12 @@ import(
 )
 
 type IdpAuthSet struct {
-  Id int64 `json:"id" gorm:"primary_key"`
+  DB.Model
   Name string `json:"name"`
   TableName string `json:"table_name"`
   Routes string `json:"routes"`
   SubId string `json:"sub_id"`
   SubName string `json:"sub_name"`
-  DeletedAt *time.Time `json:"deleted_at"`
-  UpdatedAt time.Time `json:"updated_at"`
-  CreatedAt time.Time `json:"created_at"`
 }
 
 // 获取数据库所有表
@@ -49,14 +46,11 @@ func AuthSetList (ctx context.Context) {
   // 获取分页、总数、limit
   // page, count, _, _ := DB.Limit(ctx)
   list := make([]IdpAuthSet, 0)
-
   data := context.Map{}
 
   sql := "SELECT s.*, (SELECT GROUP_CONCAT(cast(`name` as char(10)) SEPARATOR ',') FROM idp_auth_set where FIND_IN_SET(id, s.sub_id)) as sub_name from idp_auth_set as s order by id desc"
-  DB.EngineBak.Raw(sql).Scan(&list)
-
-  if len(list) <= 0 {
-    data = Utils.NewResData(1, "return data is empty.", ctx)
+  if err := DB.EngineBak.Raw(sql).Scan(&list).Error; err != nil {
+    data = Utils.NewResData(1, err, ctx)
   } else {
     resData := Utils.TotalData(list, 1, int64(len(list)), len(list))
     data = Utils.NewResData(0, resData, ctx)
@@ -80,14 +74,12 @@ func AuthSetDetail (ctx context.Context) {
   id, _ := ctx.Params().GetInt64("id")
   table.Id = id
 
-  result := DB.EngineBak.Where("id =?", table.Id).First(&table)
-  if result.Error != nil {
+  if err := DB.EngineBak.Where("id =?", table.Id).First(&table).Error; err != nil {
     ctx.JSON(Utils.NewResData(1, "return data is empty.", ctx))
     return
   }
 
   ctx.JSON(Utils.NewResData(0, table, ctx))
-
 }
 
 // 新增
@@ -147,15 +139,12 @@ func sumbitAuthSetData(tye int, ctx context.Context) context.Map {
   // var table1 IdpAuthSet
   var exist IdpAdminRoles
   value := []interface{}{table.Id, table.Name}
-  err = DB.EngineBak.Where("id<>? and name = ?", value...).First(&exist).Error
-  if err == nil {
+  if err := DB.EngineBak.Where("id<>? and name = ?", value...).First(&exist).Error; err == nil {
     return Utils.NewResData(1, table.Name + "已存在", ctx)
   }
 
-  // 写入数据库
+  // 修改
   if tye == 1 {
-    // 修改
-
     if err := DB.EngineBak.Model(&table).Omit("last_table", "sub_name").Where("id =?", table.IdpAuthSet.Id).Updates(&table).Error; err != nil {
       return Utils.NewResData(1, "修改失败", ctx)
     }
@@ -178,7 +167,7 @@ func sumbitAuthSetData(tye int, ctx context.Context) context.Map {
     return Utils.NewResData(0, "修改成功", ctx)
   }
 
-    // 新增
+  // 新增
   if err := DB.EngineBak.Omit("last_table", "sub_name").Create(&table).Error; err != nil {
     return Utils.NewResData(1, "添加失败", ctx)
   }
@@ -221,7 +210,7 @@ func AuthSetDel (ctx context.Context) {
   // 开始删除
   data := context.Map{}
   if err := DB.EngineBak.Where("id =?", table.Id).Delete(&table).Error; err != nil {
-    data = Utils.NewResData(1, err.Error(), ctx)
+    data = Utils.NewResData(1, err, ctx)
   } else {
     data = Utils.NewResData(0, "删除成功", ctx)
   }
