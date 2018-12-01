@@ -3,7 +3,7 @@ package utils
 import (
   // "fmt"
   "math"
-  "strings"
+  // "strings"
   "github.com/kataras/iris/context"
   Public "../public"
 )
@@ -11,7 +11,7 @@ import (
 func NewResData(code int, data interface{}, ctx context.Context) context.Map {
   var msg interface{}
   var resData interface{}
-  var err error
+  // var err error
 
   if code == 0 {
     msg = "success"
@@ -19,30 +19,40 @@ func NewResData(code int, data interface{}, ctx context.Context) context.Map {
     msg = "error"
   }
 
-
-  if Public.NODE_ENV && strings.ToUpper(ctx.Method()) == "GET" {
+  resData = data
+  // if Public.NODE_ENV && strings.ToUpper(ctx.Method()) == "GET" {
+  if Public.NODE_ENV {
     secretKey := ctx.GetHeader("Secret-Key")
     headHash  := ctx.GetHeader("Hash")
 
     if secretKey == "" || headHash == "" {
       msg     = "error"
       resData = "非法数据请求"
-    } else {
-      hash := Public.CheckHash(secretKey)
-      if headHash != hash {
+    } else if hash := Public.CheckHash(secretKey); hash != headHash {
         msg     = "error"
         resData = "非法数据请求"
-      } else {
-        resData, err = Public.EncryptJosn(data, secretKey)
-        if err != nil {
-          msg     = "error"
-          resData = "非法数据请求"
-        }
-      }
+
+      // hash := Public.CheckHash(secretKey)
+      // if headHash != hash {
+      //   msg     = "error"
+      //   resData = "非法数据请求1"
+      // } else {
+      //   resData = data
+      // }
+
+      // 暂时注释，前端解密卡顿
+      // else {
+      //   resData, err = Public.EncryptJosn(data, secretKey)
+      //   if err != nil {
+      //     msg     = "error"
+      //     resData = "非法数据请求2"
+      //   }
+      // }
     }
-  } else {
-    resData = data
   }
+  // else {
+  //   resData = data
+  // }
 
   text := context.Map{
     "code"        : code,

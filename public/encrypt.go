@@ -33,7 +33,9 @@ func EncryptMd5(text string) string {
 
 // 组装返回header hash加密后的值
 func CheckHash(text string) string {
-  data := fmt.Sprintf("%x", md5.Sum([]byte(text[8:len(text) / 2] + "EQUOYpl72tsjwzJnnY")))
+  // 暂时注释，前端解密卡顿
+  // data := fmt.Sprintf("%x", md5.Sum([]byte(text[8:len(text) / 2] + "EQUOYpl72tsjwzJnnY")))
+  data := fmt.Sprintf("%x", md5.Sum([]byte(text[5:len(text) / 2] + "EQUOYpl72tsjwzJnnY")))
   return data
 }
 
