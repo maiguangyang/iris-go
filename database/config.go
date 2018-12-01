@@ -256,7 +256,7 @@ func CheckAdminAuth(ctx context.Context, table string) (bool, bool, int, error) 
 
 // 返回用户的权限
 func AuthData(ctx context.Context, str interface{}, rid, table string) (bool, bool, error) {
-  if err := Engine.Order("id desc").Where("rid in(" + rid + ")").Limit(50000).Offset(0).Find(str).Error; err != nil {
+  if err := Engine.Order("id desc").Where("rid in(" + rid + ")").Limit(-1).Offset(-1).Find(str).Error; err != nil {
     return false, false, err
   }
 
