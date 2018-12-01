@@ -37,7 +37,7 @@ func RouteAuthList (ctx context.Context) {
   data := context.Map{}
 
   var total int64
-  if err := DB.EngineBak.Model(&list).Order("id desc").Count(&total).Limit(count).Offset(offset).Find(&list).Error; err != nil {
+  if err := DB.Engine.Model(&list).Order("id desc").Count(&total).Limit(count).Offset(offset).Find(&list).Error; err != nil {
     data = Utils.NewResData(1, err, ctx)
   } else {
     resData := Utils.TotalData(list, page, total, count)
@@ -60,7 +60,7 @@ func RouteAuthDetail (ctx context.Context) {
   id, _ := ctx.Params().GetInt64("id")
   table.Id = id
 
-  if err := DB.EngineBak.Where("id =?", table.Id).First(&table).Error; err != nil {
+  if err := DB.Engine.Where("id =?", table.Id).First(&table).Error; err != nil {
     ctx.JSON(Utils.NewResData(1, err, ctx))
     return
   }
@@ -110,16 +110,16 @@ func sumbitRouteAuthData(tye int, ctx context.Context) context.Map {
   // 判断数据库里面是否已经存在
   var exist IdpAdminAuth
   value := []interface{}{table.Rid}
-  if err := DB.EngineBak.Where("rid =?", value...).First(&exist).Error; err == nil {
+  if err := DB.Engine.Where("rid =?", value...).First(&exist).Error; err == nil {
     // return Utils.NewResData(1, "已分配权限", ctx)
-    if err := DB.EngineBak.Model(&table).Where("rid =?", table.Rid).Updates(&table).Error; err != nil {
+    if err := DB.Engine.Model(&table).Where("rid =?", table.Rid).Updates(&table).Error; err != nil {
       return Utils.NewResData(1, "修改失败", ctx)
     }
     return Utils.NewResData(0, "修改成功", ctx)
   }
 
   // 新增
-  if err := DB.EngineBak.Create(&table).Error; err != nil {
+  if err := DB.Engine.Create(&table).Error; err != nil {
     return Utils.NewResData(1, "添加失败", ctx)
   }
 
@@ -146,14 +146,14 @@ func RouteAuthDel (ctx context.Context) {
   }
 
   // 判断数据库里面是否已经存在
-  if err := DB.EngineBak.Where("id=?", table.Id).First(&table).Error; err != nil {
+  if err := DB.Engine.Where("id=?", table.Id).First(&table).Error; err != nil {
     ctx.JSON(Utils.NewResData(1, "该信息不存在", ctx))
     return
   }
 
   // 开始删除
   data := context.Map{}
-  if err := DB.EngineBak.Where("id =?", table.Id).Delete(&table).Error; err != nil {
+  if err := DB.Engine.Where("id =?", table.Id).Delete(&table).Error; err != nil {
     data = Utils.NewResData(1, err, ctx)
   } else {
     data = Utils.NewResData(0, "删除成功", ctx)

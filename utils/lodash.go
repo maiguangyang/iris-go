@@ -1,5 +1,9 @@
 package utils
 
+import(
+  "strings"
+
+)
 func IsEmpty(v interface{}) bool {
   if v == nil {
     return true
@@ -25,4 +29,13 @@ func IndexOf(str []interface{}, data interface{}) int {
   }
 
   return - 1
+}
+
+
+// stringToArray
+func StrToArr(data, split string) []string {
+  if IsEmpty(data) {
+    return nil
+  }
+  return strings.Split(data, split)
 }

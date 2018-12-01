@@ -35,6 +35,9 @@ type IdpAdmins struct {
   TrialTime int64 `json:"trial_time" gorm:"default:null"`
   ContractTime int64 `json:"contract_time" gorm:"default:null"`
 
+  Groups []IdpAdminGroups `json:"groups"`
+  Roles []IdpAdminRoles `json:"roles"`
+  // Roles []IdpAdminRoles `json:"roles"`
   // Groups []IdpAdminGroups `json:"groups" gorm:"foreignkey:Id;association_foreignkey:Gid"`
   // Roles []IdpAdminRoles `json:"roles" gorm:"FOREIGNKEY:Id"`
 }
@@ -66,7 +69,7 @@ func Login(ctx context.Context) {
   data := context.Map{}
 
 
-  result := DB.EngineBak.Model(&table).First(&table, 1)
+  result := DB.Engine.Model(&table).First(&table, 1)
 
   if result.Error != nil {
     data = Utils.NewResData(1, "请检查账号密码输入是否正确", ctx)
@@ -91,7 +94,7 @@ func Login(ctx context.Context) {
       table.LoginIp    = ip
 
       // 更新用户登陆信息
-      result = DB.EngineBak.Model(&table).UpdateColumns(&table)
+      result = DB.Engine.Model(&table).UpdateColumns(&table)
       if result.Error != nil {
         ctx.JSON(Utils.NewResData(1, result.Error, ctx))
         return
@@ -127,10 +130,21 @@ func Detail (ctx context.Context) {
 func GetUserDetail(uid int64, ctx context.Context) context.Map {
 
   var table IdpAdmins
+  // var groups IdpAdminGroups
   // table.Id = uid
 
-  if err := DB.EngineBak.Model(&table).Where("id=?", uid).First(&table).Error; err != nil {
+  if err := DB.Engine.Model(&table).Where("id=?", uid).First(&table).Error; err != nil {
     return Utils.NewResData(1, err, ctx)
+  }
+
+  gList := make([]IdpAdminGroups, 0)
+  if err := DB.Engine.Where("id in(?)", Utils.StrToArr(table.Gid, ",")).Find(&gList).Error; err == nil {
+    table.Groups = gList
+  }
+
+  rList := make([]IdpAdminRoles, 0)
+  if err := DB.Engine.Where("id in(?)", Utils.StrToArr(table.Rid, ",")).Find(&rList).Error; err == nil {
+    table.Roles  = rList
   }
 
   return Utils.NewResData(0, table, ctx)
@@ -163,7 +177,7 @@ func HandleAdminRoutes(ctx context.Context) {
 
     var list dataJson
     sql := `select auth.id, auth.rid, auth.sid as sids, auth.content, a.table_name, a.id as sid, a.name, a.routes, a.sub_id, b.id as bid, b.routes as sub_routes from idp_admin_auth as auth left join idp_auth_set as a ON FIND_IN_SET(a.id, auth.sid) left join idp_auth_set as b ON FIND_IN_SET(b.id, a.sub_id) where auth.rid = ?`
-    if err := DB.EngineBak.Raw(sql, reqData["rid"]).Scan(&list).Error; err != nil {
+    if err := DB.Engine.Raw(sql, reqData["rid"]).Scan(&list).Error; err != nil {
       data = Utils.NewResData(1, err, ctx)
     } else {
       data = Utils.NewResData(0, list, ctx)

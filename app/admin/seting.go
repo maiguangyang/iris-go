@@ -28,7 +28,7 @@ func AuthSetTable(ctx context.Context) {
 
   list := make([]handleTableName, 0)
   sql := "select table_name, create_time from information_schema.tables where table_schema = (select database())"
-  DB.EngineBak.Raw(sql).Scan(&list)
+  DB.Engine.Raw(sql).Scan(&list)
 
   data := Utils.NewResData(0, list, ctx)
   ctx.JSON(data)
@@ -49,7 +49,7 @@ func AuthSetList (ctx context.Context) {
   data := context.Map{}
 
   sql := "SELECT s.*, (SELECT GROUP_CONCAT(cast(`name` as char(10)) SEPARATOR ',') FROM idp_auth_set where FIND_IN_SET(id, s.sub_id)) as sub_name from idp_auth_set as s order by id desc"
-  if err := DB.EngineBak.Raw(sql).Scan(&list).Error; err != nil {
+  if err := DB.Engine.Raw(sql).Scan(&list).Error; err != nil {
     data = Utils.NewResData(1, err, ctx)
   } else {
     resData := Utils.TotalData(list, 1, int64(len(list)), len(list))
@@ -74,7 +74,7 @@ func AuthSetDetail (ctx context.Context) {
   id, _ := ctx.Params().GetInt64("id")
   table.Id = id
 
-  if err := DB.EngineBak.Where("id =?", table.Id).First(&table).Error; err != nil {
+  if err := DB.Engine.Where("id =?", table.Id).First(&table).Error; err != nil {
     ctx.JSON(Utils.NewResData(1, "return data is empty.", ctx))
     return
   }
@@ -139,13 +139,13 @@ func sumbitAuthSetData(tye int, ctx context.Context) context.Map {
   // var table1 IdpAuthSet
   var exist IdpAdminRoles
   value := []interface{}{table.Id, table.Name}
-  if err := DB.EngineBak.Where("id<>? and name = ?", value...).First(&exist).Error; err == nil {
+  if err := DB.Engine.Where("id<>? and name = ?", value...).First(&exist).Error; err == nil {
     return Utils.NewResData(1, table.Name + "已存在", ctx)
   }
 
   // 修改
   if tye == 1 {
-    if err := DB.EngineBak.Model(&table).Omit("last_table", "sub_name").Where("id =?", table.IdpAuthSet.Id).Updates(&table).Error; err != nil {
+    if err := DB.Engine.Model(&table).Omit("last_table", "sub_name").Where("id =?", table.IdpAuthSet.Id).Updates(&table).Error; err != nil {
       return Utils.NewResData(1, "修改失败", ctx)
     }
 
@@ -156,11 +156,11 @@ func sumbitAuthSetData(tye int, ctx context.Context) context.Map {
       }
       var result Result
       sql := "SELECT GROUP_CONCAT(cast(`id` as char(10)) SEPARATOR ',') as id  FROM idp_admin_auth WHERE find_in_set(?,sid)"
-      DB.EngineBak.Raw(sql, table.Id).Scan(&result)
+      DB.Engine.Raw(sql, table.Id).Scan(&result)
 
       if result.Id > 0 {
         sql = "update idp_admin_auth set content=replace(content, ?, ?) where id in(?)"
-        DB.EngineBak.Exec(sql, table.Last_table, table.IdpAuthSet.TableName, result.Id)
+        DB.Engine.Exec(sql, table.Last_table, table.IdpAuthSet.TableName, result.Id)
       }
     }
 
@@ -168,7 +168,7 @@ func sumbitAuthSetData(tye int, ctx context.Context) context.Map {
   }
 
   // 新增
-  if err := DB.EngineBak.Omit("last_table", "sub_name").Create(&table).Error; err != nil {
+  if err := DB.Engine.Omit("last_table", "sub_name").Create(&table).Error; err != nil {
     return Utils.NewResData(1, "添加失败", ctx)
   }
 
@@ -195,21 +195,21 @@ func AuthSetDel (ctx context.Context) {
   }
 
   // 判断数据库里面是否已经存在
-  if err := DB.EngineBak.Where("id=?", table.Id).First(&table).Error; err != nil {
+  if err := DB.Engine.Where("id=?", table.Id).First(&table).Error; err != nil {
     ctx.JSON(Utils.NewResData(1, "该信息不存在", ctx))
     return
   }
 
   // 判断是否被使用，如果存在的话，不予删除
   var roleExist IdpAdminAuth
-  if err := DB.EngineBak.Where("sid=?", table.Id).First(&roleExist).Error; err == nil {
+  if err := DB.Engine.Where("sid=?", table.Id).First(&roleExist).Error; err == nil {
     ctx.JSON(Utils.NewResData(1, "无法删除，用户权限中使用了该值", ctx))
     return
   }
 
   // 开始删除
   data := context.Map{}
-  if err := DB.EngineBak.Where("id =?", table.Id).Delete(&table).Error; err != nil {
+  if err := DB.Engine.Where("id =?", table.Id).Delete(&table).Error; err != nil {
     data = Utils.NewResData(1, err, ctx)
   } else {
     data = Utils.NewResData(0, "删除成功", ctx)

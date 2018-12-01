@@ -107,5 +107,3 @@ func ResNodeEnvData(table interface{}, ctx context.Context) error {
   return nil
 }
 
-
-

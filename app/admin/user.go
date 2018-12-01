@@ -1,7 +1,7 @@
 package admin
 
 import (
-  "fmt"
+  // "fmt"
   // "reflect"
   "github.com/kataras/iris/context"
 
@@ -20,9 +20,16 @@ func UserList (ctx context.Context) {
     return
   }
 
+  // 获取服务端用户信息
+  reqData, err := Auth.HandleUserJWTToken(ctx, "admin")
+  if err != nil {
+    ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
+    return
+  }
+
   // 获取分页、总数、limit
   page, count, offset, filters := DB.Limit(ctx)
-  list := make([]IdpAdmins, 0)
+  lists := make([]IdpAdmins, 0)
 
   // 下面开始是查询条件 where
   whereData  := ""
@@ -39,55 +46,57 @@ func UserList (ctx context.Context) {
   sex        := filters["sex"]
 
   if !Utils.IsEmpty(start_time) && !Utils.IsEmpty(end_time) {
-    whereData = DB.IsWhereEmpty(whereData, `idp_admins.entry_time >= ? and idp_admins.entry_time <= ?`)
+    whereData = DB.IsWhereEmpty(whereData, `entry_time >= ? and entry_time <= ?`)
     whereValue = append(whereValue, start_time, end_time)
   }
 
   if !Utils.IsEmpty(username) {
-    whereData = DB.IsWhereEmpty(whereData, `idp_admins.username like ?`)
+    whereData = DB.IsWhereEmpty(whereData, `username like ?`)
     whereValue = append(whereValue, `%` + username.(string) + `%`)
   }
 
   if !Utils.IsEmpty(phone) {
-    whereData = DB.IsWhereEmpty(whereData, `idp_admins.phone = ?`)
+    whereData = DB.IsWhereEmpty(whereData, `phone = ?`)
     whereValue = append(whereValue, phone)
   }
 
-  if !Utils.IsEmpty(state) {
-    whereData = DB.IsWhereEmpty(whereData, `idp_admins.state = ?`)
-    whereValue = append(whereValue, state)
+  // 如果不是超级账户，只显示state状态为1的信息
+  super := int64(reqData["super"].(float64))
+  if super == 2 {
+    if !Utils.IsEmpty(state) {
+      whereData = DB.IsWhereEmpty(whereData, `state = ?`)
+      whereValue = append(whereValue, state)
+    }
+  } else {
+    whereData = DB.IsWhereEmpty(whereData, "state =?")
+    whereValue = append(whereValue, 1)
   }
 
+
   if !Utils.IsEmpty(gid) {
-    whereData = DB.IsWhereEmpty(whereData, `idp_admins.gid like ?`)
+    whereData = DB.IsWhereEmpty(whereData, `gid like ?`)
     whereValue = append(whereValue, `%` + Utils.Float64ToStr(gid.(float64)) + `%`)
   }
 
   if !Utils.IsEmpty(rid) {
-    whereData = DB.IsWhereEmpty(whereData, `idp_admins.rid like ?`)
+    whereData = DB.IsWhereEmpty(whereData, `rid like ?`)
     whereValue = append(whereValue, `%` + Utils.Float64ToStr(rid.(float64)) + `%`)
   }
 
   if !Utils.IsEmpty(job_state) {
-    whereData = DB.IsWhereEmpty(whereData, `idp_admins.job_state = ?`)
+    whereData = DB.IsWhereEmpty(whereData, `job_state = ?`)
     whereValue = append(whereValue, job_state)
   }
 
   if !Utils.IsEmpty(sex) {
-    whereData = DB.IsWhereEmpty(whereData, `idp_admins.sex = ?`)
+    whereData = DB.IsWhereEmpty(whereData, `sex = ?`)
     whereValue = append(whereValue, sex)
   }
 
   // 是否跨部门
   if stride != true {
-    // 获取服务端用户信息
-    reqData, err := Auth.HandleUserJWTToken(ctx, "admin")
-    if err != nil {
-      ctx.JSON(Utils.NewResData(1, err.Error(), ctx))
-      return
-    }
     if !Utils.IsEmpty(reqData["gid"]) {
-      whereData = DB.IsWhereEmpty(whereData, "idp_admins.gid =?")
+      whereData = DB.IsWhereEmpty(whereData, "gid =?")
       whereValue = append(whereValue, reqData["gid"])
     }
   }
@@ -96,10 +105,22 @@ func UserList (ctx context.Context) {
   // 查询列表
   data := context.Map{}
   var total int64
-  if err := DB.EngineBak.Model(&list).Order("id desc").Where(whereData, whereValue...).Count(&total).Limit(count).Offset(offset).Find(&list).Error; err != nil {
+  if err := DB.Engine.Model(&lists).Order("id desc").Where(whereData, whereValue...).Count(&total).Limit(count).Offset(offset).Find(&lists).Error; err != nil {
     data = Utils.NewResData(1, err, ctx)
   } else {
-    resData := Utils.TotalData(list, page, total, count)
+
+    gList := make([]IdpAdminGroups, 0)
+    rList := make([]IdpAdminRoles, 0)
+    for key, list := range lists {
+      if err := DB.Engine.Where("id in(?)", Utils.StrToArr(list.Gid, ",")).Find(&gList).Error; err == nil {
+        lists[key].Groups = gList
+      }
+      if err := DB.Engine.Where("id in(?)", Utils.StrToArr(list.Rid, ",")).Find(&rList).Error; err == nil {
+        lists[key].Roles  = rList
+      }
+    }
+
+    resData := Utils.TotalData(lists, page, total, count)
     data = Utils.NewResData(0, resData, ctx)
   }
 
@@ -147,7 +168,6 @@ func sumbitUserData(tye int, ctx context.Context) context.Map {
   }
 
   var table IdpAdminsPass
-  fmt.Println(&table)
   // 根据不同环境返回数据
   err = Utils.ResNodeEnvData(&table, ctx)
   if err != nil {
@@ -201,7 +221,7 @@ func sumbitUserData(tye int, ctx context.Context) context.Map {
   // 看看是否修改密码
   var isUser IdpAdminsPass
   // has, err := DB.Engine.Cols("password").Where("id=?", userData.Id).Get(&isUser)
-  DB.EngineBak.Where("id=?", userData.Id).First(&isUser)
+  DB.Engine.Where("id=?", userData.Id).First(&isUser)
 
   if Utils.IsEmpty(table.Password) {
     table.Password = isUser.Password
@@ -212,21 +232,21 @@ func sumbitUserData(tye int, ctx context.Context) context.Map {
   // 判断数据库里面是否已经存在
   var exist IdpAdmins
   if tye == 1 {
-    if err := DB.EngineBak.Where("id<>? and phone=?", userData.Id, table.Phone).First(&exist).Error; err == nil {
+    if err := DB.Engine.Where("id<>? and phone=?", table.Id, table.Phone).First(&exist).Error; err == nil {
       return Utils.NewResData(1, table.Phone + "已存在", ctx)
     }
 
-    if err := DB.EngineBak.Model(&table).Where("id =?", table.Id).Updates(&table).Error; err != nil {
+    if err := DB.Engine.Model(&table).Where("id =?", table.Id).Updates(&table).Error; err != nil {
       return Utils.NewResData(1, "修改失败", ctx)
     }
     return Utils.NewResData(0, "修改成功", ctx)
   }
 
-  if err := DB.EngineBak.Where("phone=?", table.Phone).First(&exist).Error; err == nil {
+  if err := DB.Engine.Where("phone=?", table.Phone).First(&exist).Error; err == nil {
     return Utils.NewResData(1, table.Phone + "已存在", ctx)
   }
     // 新增
-  if err := DB.EngineBak.Create(&table).Error; err != nil {
+  if err := DB.Engine.Create(&table).Error; err != nil {
     return Utils.NewResData(1, "添加失败", ctx)
   }
 
@@ -256,14 +276,14 @@ func UserDel (ctx context.Context) {
 
 
   // 判断数据库里面是否已经存在
-  if err := DB.EngineBak.Where("id=?", table.Id).First(&table).Error; err != nil {
+  if err := DB.Engine.Where("id=?", table.Id).First(&table).Error; err != nil {
     ctx.JSON(Utils.NewResData(1, "该信息不存在", ctx))
     return
   }
 
   // 开始删除
   data := context.Map{}
-  if err := DB.EngineBak.Where("id =?", table.Id).Delete(&table).Error; err != nil {
+  if err := DB.Engine.Where("id =?", table.Id).Delete(&table).Error; err != nil {
     data = Utils.NewResData(1, err, ctx)
   } else {
     data = Utils.NewResData(0, "删除成功", ctx)

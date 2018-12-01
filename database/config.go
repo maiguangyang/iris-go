@@ -2,15 +2,14 @@ package database
 
 import (
   "fmt"
+  // "time"
   // "reflect"
-  "database/sql"
+  // "database/sql"
   // "strings"
-  "time"
   "errors"
   "encoding/json"
   "github.com/kataras/iris/context"
   _ "github.com/go-sql-driver/mysql"
-  "github.com/go-xorm/xorm"
 
   "github.com/jinzhu/gorm"
 
@@ -19,17 +18,27 @@ import (
   Public "../public"
 )
 
-var Engine *xorm.Engine
-var EngineBak *gorm.DB
+var Engine *gorm.DB
 
-type NullInt64 = *sql.NullInt64
+// type NullInt64 = *sql.NullInt64
 
-type Model struct {
-  Id int64 `json:"id" gorm:"primary_key"`
-  // ID        int64
-  CreatedAt NullInt64 `json:"created_at" gorm:"type:int(11);null;"default:null"`
-  UpdatedAt NullInt64 `json:"updated_at" gorm:"type:int(11);null;default:null"`
-  DeletedAt NullInt64 `json:"deleted_at" gorm:"type:int(11);null;"default:null"`
+// type Model struct {
+//   Id int64 `json:"id" gorm:"primary_key;AUTO_INCREMENT"`
+//   // ID        int64
+//   CreatedAt NullInt64 `json:"created_at" gorm:"type:int(11);null;"default:null"`
+//   UpdatedAt NullInt64 `json:"updated_at" gorm:"type:int(11);null;default:null"`
+//   DeletedAt NullInt64 `json:"deleted_at" gorm:"type:int(11);null;"default:null"`
+// }
+
+type User struct {
+  Model
+  Lid int64
+  Languages []Language `gorm:"many2many:user_languages;foreignkey:Lid;association_foreignkey:Id;association_jointable_foreignkey:l_id;jointable_foreignkey:u_id;"`
+}
+
+type Language struct {
+  Model
+  Name string
 }
 
 // func (Model) BeforeCreate(scope *gorm.Scope) error {
@@ -60,52 +69,45 @@ func OpenSql() error {
 
   var err error
 
-  fmt.Println(time.Now())
-
+  // gorm
   // 接连数据库，已经连接上，要手动断开连接
-  if Engine != nil && Engine.Ping() == nil {
+  if Engine != nil && Engine.DB().Ping() == nil {
     Engine.Close()
   }
 
-  Engine, _ = xorm.NewEngine("mysql", dataSourceName)
+  Engine, err = gorm.Open("mysql", dataSourceName)
+  if err != nil {
+    return err
+  }
 
-  err = Engine.Ping()
+  err = Engine.DB().Ping()
   if err != nil {
     defer Engine.Close()
     return err
   }
 
 
-
-  // gorm
-  // 接连数据库，已经连接上，要手动断开连接
-  if EngineBak != nil && EngineBak.DB().Ping() == nil {
-    EngineBak.Close()
-  }
-
-  EngineBak, err = gorm.Open("mysql", dataSourceName)
-  if err != nil {
-    return err
-  }
-
-  err = EngineBak.DB().Ping()
-  if err != nil {
-    defer EngineBak.Close()
-    return err
-  }
-
   // gorm.DefaultTableNameHandler = func (db *gorm.DB, defaultTableName string) string  {
   //   return "idp_" + defaultTableName;
   // }
 
   // 加载G重写后的orm插件
-  Public.InitGorm(EngineBak)
+  Public.InitGorm(Engine)
 
-  EngineBak.LogMode(true)
-  EngineBak.SingularTable(true)
-  EngineBak.DB().SetMaxIdleConns(2000)
-  EngineBak.DB().SetMaxOpenConns(10000)
-  HasInitTable()
+  Engine.LogMode(true)
+  Engine.SingularTable(true)
+  Engine.DB().SetMaxIdleConns(2000)
+  Engine.DB().SetMaxOpenConns(10000)
+
+  // HasInitTable()
+
+
+
+  // var user User
+  // var language Language
+  // Engine.AutoMigrate(&User{Lid: 1})
+  // Engine.Set("gorm:table_options", "ENGINE=InnoDB23").AutoMigrate(&language)
+
 
   return nil
 
@@ -124,10 +126,10 @@ func HasInitTable() {
   group.Name      = "董事会"
   group.Aid       = 1
 
-  has := EngineBak.HasTable(&IdpAdminGroup{})
+  has := Engine.HasTable(&IdpAdminGroup{})
   if (has == false) {
-    EngineBak.Exec(IDP_ADMIN_GROUP)
-    EngineBak.Create(&group)
+    Engine.Exec(IDP_ADMIN_GROUP)
+    Engine.Create(&group)
   }
 
   // 角色表
@@ -143,10 +145,10 @@ func HasInitTable() {
   role.Gid  = 1
   role.Aid  = 1
 
-  has = EngineBak.HasTable(&IdpAdminRole{})
+  has = Engine.HasTable(&IdpAdminRole{})
   if (has == false) {
-    EngineBak.Exec(IDP_ADMIN_ROLE)
-    EngineBak.Create(&role)
+    Engine.Exec(IDP_ADMIN_ROLE)
+    Engine.Create(&role)
   }
 
   // 人员表
@@ -172,23 +174,23 @@ func HasInitTable() {
   admin.JobState = 2
   admin.Super    = 2
 
-  has = EngineBak.HasTable(&IdpAdmins{})
+  has = Engine.HasTable(&IdpAdmins{})
   if (has == false) {
-    EngineBak.Exec(IDP_ADMIN)
-    EngineBak.Create(&admin)
+    Engine.Exec(IDP_ADMIN)
+    Engine.Create(&admin)
   }
 
 
   // 权限配置表
-  has = EngineBak.HasTable("idp_auth_set")
+  has = Engine.HasTable("idp_auth_set")
   if has == false {
-    EngineBak.Exec(IDP_AUTH_SET)
+    Engine.Exec(IDP_AUTH_SET)
   }
 
   // 员工资料
-  has = EngineBak.HasTable("idp_admin_archive")
+  has = Engine.HasTable("idp_admin_archive")
   if has == false {
-    EngineBak.Exec(IDP_ADMIN_ARCHIVE)
+    Engine.Exec(IDP_ADMIN_ARCHIVE)
   }
 
   // 权限表
@@ -206,10 +208,10 @@ func HasInitTable() {
   auth.Content = "*"
   auth.Auth = 1
 
-  has = EngineBak.HasTable(&IdpAdminAuth{})
+  has = Engine.HasTable(&IdpAdminAuth{})
   if (has == false) {
-    EngineBak.Exec(IDP_ADMIN_AUTH)
-    EngineBak.Create(&auth)
+    Engine.Exec(IDP_ADMIN_AUTH)
+    Engine.Create(&auth)
   }
 
   // fmt.Println(Public.DecryptPassword("admin", "c02f8a145384b65099b17b9d64dd03e1"))
@@ -254,7 +256,7 @@ func CheckAdminAuth(ctx context.Context, table string) (bool, bool, int, error) 
 
 // 返回用户的权限
 func AuthData(ctx context.Context, str interface{}, rid, table string) (bool, bool, error) {
-  if err := EngineBak.Order("id desc").Where("rid in(" + rid + ")").Limit(50000).Offset(0).Find(str).Error; err != nil {
+  if err := Engine.Order("id desc").Where("rid in(" + rid + ")").Limit(50000).Offset(0).Find(str).Error; err != nil {
     return false, false, err
   }
 

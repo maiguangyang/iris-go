@@ -28,5 +28,11 @@
     "del"  : [1, 2, 3, 4, 6],
   },
 
-}
+},
 
+
+[
+  {
+    "id": 1, "name": "idp_admin_auth", "add": 0, "edit": 0, "list": 0, "info": 0, "del": 0,
+  }
+]
